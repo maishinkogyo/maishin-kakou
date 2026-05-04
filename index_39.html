@@ -2485,9 +2485,10 @@ async function syncToCloud(){
       const{error:e1}=await sb.from('tasks').upsert(payloads);
       if(e1)throw new Error('tasks: '+e1.message);
     }
-    // workers
+    // workers（既存を全削除してから挿入）
     if(workers.length){
-      const{error:e2}=await sb.from('workers_list').upsert(workers.map((name,i)=>({name,sort_order:i})));
+      await sb.from('workers_list').delete().neq('name','');
+      const{error:e2}=await sb.from('workers_list').insert(workers.map((name,i)=>({name,sort_order:i})));
       if(e2)throw new Error('workers_list: '+e2.message);
     }
     // materials
