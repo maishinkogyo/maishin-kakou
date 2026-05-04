@@ -2483,40 +2483,41 @@ async function syncToCloud(){
     if(tasks.length){
       const payloads=tasks.map(taskToDb);
       const{error:e1}=await sb.from('tasks').upsert(payloads);
-      if(e1)throw e1;
+      if(e1)throw new Error('tasks: '+e1.message);
     }
     // workers
     if(workers.length){
       const{error:e2}=await sb.from('workers_list').upsert(workers.map((name,i)=>({name,sort_order:i})));
-      if(e2)throw e2;
+      if(e2)throw new Error('workers_list: '+e2.message);
     }
     // materials
     if(materials.length){
       const{error:e3}=await sb.from('materials').upsert(materials.map(m=>({id:m.id,name:m.name,note:m.note||null})));
-      if(e3)throw e3;
+      if(e3)throw new Error('materials: '+e3.message);
     }
     // vehicles
     if(vehicles.length){
       const{error:e4}=await sb.from('vehicles').upsert(vehicles.map(v=>({id:v.id,name:v.name,note:v.note||null})));
-      if(e4)throw e4;
+      if(e4)throw new Error('vehicles: '+e4.message);
     }
     // reports
     if(reports.length){
       const{error:e5}=await sb.from('daily_reports').upsert(reports.map(r=>({id:r.id,date:r.date,worker:r.worker,rows:r.rows||[],overtime:r.overtime||0,late:r.late||0,early:r.early||0,memo:r.memo||''})));
-      if(e5)throw e5;
+      if(e5)throw new Error('daily_reports: '+e5.message);
     }
     // sales
     if(sales.length){
       const{error:e6}=await sb.from('unit_sales').upsert(sales.map(s=>({id:s.id,date:s.date,task_id:s.taskId,task_name:s.taskName,buyer:s.buyer,kg:s.kg,amount:s.amount,memo:s.memo||'',status:s.status||'出荷済'})));
-      if(e6)throw e6;
+      if(e6)throw new Error('unit_sales: '+e6.message);
     }
     // meta
-    await sb.from('meta').upsert([{key:'nextId',value:nextId},{key:'nextNum',value:nextNum}]);
+    const{error:e7}=await sb.from('meta').upsert([{key:'nextId',value:nextId},{key:'nextNum',value:nextNum}]);
+    if(e7)throw new Error('meta: '+e7.message);
     hideLoading();
     alert(`✅ 同期完了！\nタスク: ${tasks.length}件\n作業者: ${workers.length}名\n材料: ${materials.length}件\n車両: ${vehicles.length}件\n日報: ${reports.length}件`);
   }catch(e){
     hideLoading();
-    alert('同期失敗: '+e.message);
+    alert('同期失敗: '+(e.message||JSON.stringify(e)));
   }
 }
 
