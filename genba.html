@@ -91,6 +91,12 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--accent-light);color:var(--accent);border-radius:20px;font-size:12px;font-weight:600;margin:2px;}
 .chip-remove{cursor:pointer;opacity:.6;line-height:1;}
 .chip-remove:hover{opacity:1;}
+.worker-toggle{display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none;margin:3px;}
+.worker-toggle.assigned{background:var(--accent-light);color:var(--accent);border:1px solid #86efac;}
+.worker-toggle.assigned:hover{background:#bbf7d0;}
+.worker-toggle.unassigned{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+.worker-toggle.unassigned:hover{background:#e2e8f0;color:var(--text);}
+.assign-banner{border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
 
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
@@ -184,12 +190,11 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- 人員配置 -->
       <div class="page" id="page-assign">
         <div class="page-title">人員配置</div>
-        <div class="page-desc">日付ごとに作業員の配置を設定</div>
+        <div class="page-desc">工事ごとに作業員をクリックで配置・解除できます</div>
         <div class="toolbar">
           <input type="date" id="assignDate" class="btn btn-secondary" style="font-weight:500" onchange="renderAssign()">
-          <div class="spacer"></div>
-          <button class="btn btn-primary" onclick="openAssignModal()">＋ 配置追加</button>
         </div>
+        <div id="assignBanner"></div>
         <div id="assignBoard"></div>
       </div>
 
@@ -263,21 +268,6 @@ input,select,textarea{font-family:inherit;font-size:14px;}
   </div>
 </div>
 
-<!-- 人員配置モーダル -->
-<div class="modal-overlay" id="assignModal">
-  <div class="modal">
-    <div class="modal-title">人員配置追加</div>
-    <div class="form-row">
-      <div class="form-group"><label>現場</label><select id="asgTask"></select></div>
-      <div class="form-group"><label>作業員</label><select id="asgWorker"></select></div>
-    </div>
-    <div class="form-group" style="margin-bottom:12px"><label>メモ</label><input type="text" id="asgNote" placeholder="任意"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('assignModal')">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveAssign()">保存</button>
-    </div>
-  </div>
-</div>
 
 <!-- 原価モーダル -->
 <div class="modal-overlay" id="costModal">
@@ -405,8 +395,6 @@ function populateSelects(){
     sel.innerHTML='<option value="">現場を選択…</option>'+active.map(t=>`<option value="${t.id}">${taskName(t)}</option>`).join('');
     if(prev)sel.value=prev;
   });
-  document.getElementById('asgTask').innerHTML=active.map(t=>`<option value="${t.id}">${taskName(t)}</option>`).join('');
-  document.getElementById('asgWorker').innerHTML=fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
 }
 
 function latestProgress(tid){
@@ -543,49 +531,76 @@ async function deleteWorklog(id){
 
 // ── 人員配置 ──
 function renderAssign(){
-  const date=document.getElementById('assignDate').value,el=document.getElementById('assignBoard');
+  const date=document.getElementById('assignDate').value;
+  const el=document.getElementById('assignBoard');
+  const bannerEl=document.getElementById('assignBanner');
   const active=tasks.filter(t=>!t.complete);
-  if(!active.length){el.innerHTML='<div class="empty"><div class="empty-icon">👷</div>進行中の現場がありません</div>';return;}
+
+  if(!fieldWorkers.length){
+    bannerEl.innerHTML='';
+    el.innerHTML='<div class="empty"><div class="empty-icon">👷</div>先に設定から作業員を登録してください</div>';
+    return;
+  }
+  if(!active.length){
+    bannerEl.innerHTML='';
+    el.innerHTML='<div class="empty"><div class="empty-icon">🏗️</div>進行中の現場がありません</div>';
+    return;
+  }
+
+  // 当日いずれかの工事に配置済みの作業員ID
+  const assignedIds=new Set(assignments.filter(a=>a.date===date).map(a=>a.worker_id));
+  const unassigned=fieldWorkers.filter(w=>!assignedIds.has(w.id));
+
+  // 未配置バナー
+  if(unassigned.length){
+    bannerEl.innerHTML=`<div class="assign-banner" style="background:#fef3c7;border:1px solid #fcd34d;">
+      <span style="font-size:18px">⚠️</span>
+      <div>
+        <div style="font-weight:700;color:#d97706;font-size:13px">未配置 ${unassigned.length}名</div>
+        <div style="font-size:12px;color:#92400e;margin-top:2px">${unassigned.map(w=>w.name).join('　')}</div>
+      </div>
+    </div>`;
+  }else{
+    bannerEl.innerHTML=`<div class="assign-banner" style="background:#dcfce7;border:1px solid #86efac;">
+      <span style="font-size:18px">✅</span>
+      <div style="font-weight:700;color:#16a34a;font-size:13px">全員配置済み</div>
+    </div>`;
+  }
+
+  // 工事別カード
   el.innerHTML=active.map(t=>{
     const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===date);
-    const chips=asgList.map(a=>{
-      const w=fieldWorkers.find(fw=>fw.id===a.worker_id);
-      return w?`<span class="chip">${w.name}<span class="chip-remove" onclick="deleteAssign(${a.id})">×</span></span>`:'';
+    const chips=fieldWorkers.map(w=>{
+      const asg=asgList.find(a=>a.worker_id===w.id);
+      return asg
+        ?`<span class="worker-toggle assigned" onclick="toggleAssign(${t.id},${w.id},'${date}',${asg.id})">${w.name} ×</span>`
+        :`<span class="worker-toggle unassigned" onclick="toggleAssign(${t.id},${w.id},'${date}',null)">${w.name} ＋</span>`;
     }).join('');
     return`<div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div><div style="font-weight:700">${t.nameMain}</div>${t.nameSub?`<div style="font-size:12px;color:var(--text-muted)">${t.nameSub}</div>`:''}</div>
-        <span class="badge blue">${asgList.length}名</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700">${t.nameMain}</div>
+          ${t.nameSub?`<div style="font-size:12px;color:var(--text-muted)">${t.nameSub}</div>`:''}
+        </div>
+        <span class="badge ${asgList.length?'blue':''}">${asgList.length}名</span>
       </div>
-      <div style="min-height:28px">${chips||'<span style="font-size:12px;color:var(--text-muted)">配置なし</span>'}</div>
+      <div style="display:flex;flex-wrap:wrap">${chips}</div>
     </div>`;
   }).join('');
 }
 
-function openAssignModal(){
-  if(!fieldWorkers.length){alert('先に設定から作業員を登録してください');return;}
-  document.getElementById('asgNote').value='';
-  openModal('assignModal');
-}
-
-async function saveAssign(){
-  const tid=Number(document.getElementById('asgTask').value);
-  const wid=Number(document.getElementById('asgWorker').value);
-  const date=document.getElementById('assignDate').value;
-  const note=document.getElementById('asgNote').value.trim();
-  if(!tid||!wid){alert('現場と作業員を選択してください');return;}
-  if(assignments.find(a=>a.task_id===tid&&a.worker_id===wid&&a.date===date)){alert('すでに配置済みです');return;}
-  const{data,error}=await sb.from('field_assignments').insert({task_id:tid,worker_id:wid,date,note}).select().single();
-  if(error){alert('エラー: '+error.message);return;}
-  assignments.push(data);
-  closeModal('assignModal');flash();renderAssign();renderSites();
-}
-
-async function deleteAssign(id){
-  const{error}=await sb.from('field_assignments').delete().eq('id',id);
-  if(error){alert('エラー: '+error.message);return;}
-  assignments=assignments.filter(a=>a.id!==id);
-  flash();renderAssign();renderSites();
+async function toggleAssign(tid,wid,date,asgId){
+  if(asgId){
+    const{error}=await sb.from('field_assignments').delete().eq('id',asgId);
+    if(error){alert('エラー: '+error.message);return;}
+    assignments=assignments.filter(a=>a.id!==asgId);
+  }else{
+    const{data,error}=await sb.from('field_assignments').insert({task_id:tid,worker_id:wid,date,note:''}).select().single();
+    if(error){alert('エラー: '+error.message);return;}
+    assignments.push(data);
+  }
+  renderAssign();
+  renderSites();
 }
 
 // ── 原価管理 ──
