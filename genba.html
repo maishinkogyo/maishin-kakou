@@ -229,12 +229,6 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <div id="workerList"></div>
         </div>
 
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">Supabase テーブル作成SQL</div>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">初回のみ、SupabaseのSQL Editorで実行してください。</p>
-          <pre id="sqlBlock" style="background:var(--surface2);padding:12px;border-radius:8px;font-size:11px;overflow-x:auto;border:1px solid var(--border);line-height:1.6;white-space:pre-wrap"></pre>
-          <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="copySql()">コピー</button>
-        </div>
 
         <div class="card">
           <div class="card-title">パスワード変更</div>
@@ -379,7 +373,6 @@ async function initApp(){
   renderAssign();
   renderCosts();
   renderWorkers();
-  renderSql();
 }
 
 // ── Helpers ──
@@ -741,46 +734,6 @@ async function deleteWorker(id){
   flash();renderWorkers();populateSelects();
 }
 
-// ── SQL ──
-const SETUP_SQL=`-- 現場管理アプリ用テーブル作成
--- Supabase > SQL Editor で実行してください
-
-create table if not exists field_workers (
-  id serial primary key,
-  name text not null,
-  role text,
-  daily_rate numeric default 0,
-  note text
-);
-
-create table if not exists field_work_records (
-  id serial primary key,
-  task_id int not null,
-  date date not null,
-  content text,
-  progress int default 0,
-  note text
-);
-
-create table if not exists field_assignments (
-  id serial primary key,
-  task_id int not null,
-  worker_id int not null,
-  date date not null,
-  note text
-);
-
-create table if not exists field_costs (
-  id serial primary key,
-  task_id int not null,
-  date date not null,
-  category text not null,
-  amount numeric not null default 0,
-  note text
-);`;
-
-function renderSql(){document.getElementById('sqlBlock').textContent=SETUP_SQL;}
-function copySql(){navigator.clipboard.writeText(SETUP_SQL).then(()=>flash('コピーしました'));}
 
 // ── UI ──
 function showPage(name){
