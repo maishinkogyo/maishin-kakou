@@ -2560,7 +2560,7 @@ function initReportTab(){
 }
 
 function getActiveTaskOptions(){
-  return tasks.filter(t=>!t.complete).map(t=>`<option value="${t.id}">${taskFullName(t)}</option>`).join('');
+  return tasks.filter(t=>!t.complete).sort((a,b)=>(a.num??a.id)-(b.num??b.id)).map(t=>`<option value="${t.id}">No.${t.num??t.id}　${taskFullName(t)}</option>`).join('');
 }
 
 function syncReportTaskSelects(){
@@ -2587,7 +2587,7 @@ function addReportRow(){
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">現場</div>
       <select style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-        <option value="">タスクを選択</option>${getActiveTaskOptions()}
+        <option value="">現場を選択</option>${getActiveTaskOptions()}
       </select>
     </div>
     <div>
