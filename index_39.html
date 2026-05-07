@@ -210,6 +210,21 @@ select:focus,input:focus{border-color:var(--accent);}
 .report-work-chips{display:flex;gap:4px;flex-wrap:wrap;}
 .report-work-chip{font-size:11px;padding:1px 7px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);}
 @media(max-width:700px){.report-row{grid-template-columns:1fr auto;}.report-row-site{grid-column:1/-1;}}
+/* 日報サブタブ */
+.report-subtabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);}
+.report-subtab{padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.report-subtab:hover{color:var(--text);}
+.report-subtab.active{color:var(--accent);border-bottom-color:var(--accent);}
+/* タイムスケジュール */
+.timeline-wrap{overflow-x:auto;padding-bottom:8px;}
+.timeline-axis{display:flex;margin-left:100px;margin-bottom:2px;}
+.timeline-hour-label{flex:1;font-size:10px;color:var(--text-muted);text-align:left;padding-left:2px;border-left:1px solid var(--border);}
+.timeline-worker-row{display:flex;align-items:stretch;margin-bottom:6px;min-height:44px;}
+.timeline-worker-name{width:100px;flex-shrink:0;font-size:12px;font-weight:700;padding:4px 8px 4px 0;display:flex;align-items:center;color:var(--text);}
+.timeline-track{flex:1;position:relative;background:var(--surface2);border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+.timeline-block{position:absolute;top:3px;bottom:3px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.timeline-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+.timeline-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text);}
 /* ── Unit Sales ── */
 .us-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
 .us-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;min-width:130px;}
@@ -704,6 +719,15 @@ select:focus,input:focus{border-color:var(--accent);}
 <div class="main-content" id="tab-report">
   <div class="report-wrap">
 
+    <!-- サブタブ -->
+    <div class="report-subtabs">
+      <div class="report-subtab active" onclick="switchReportTab('input')" id="rsubtab-input">📝 入力・一覧</div>
+      <div class="report-subtab" onclick="switchReportTab('timeline')" id="rsubtab-timeline">📅 タイムスケジュール</div>
+    </div>
+
+    <!-- 入力・一覧パネル -->
+    <div id="rpanel-input">
+
     <!-- 入力エリア -->
     <div class="report-form-section">
       <div class="report-form-header">
@@ -743,6 +767,16 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
       </div>
       <div id="reportList"></div>
+    </div>
+
+    </div><!-- /rpanel-input -->
+
+    <!-- タイムスケジュールパネル -->
+    <div id="rpanel-timeline" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0"><label>日付</label><input type="date" id="tlDate" onchange="renderTimeline()"></div>
+      </div>
+      <div id="timelineView"></div>
     </div>
 
   </div>
@@ -2728,6 +2762,75 @@ function editReport(id, e){
 
   // フォームまでスクロール
   document.querySelector('.report-form-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ── 日報サブタブ ──
+function switchReportTab(tab){
+  document.getElementById('rpanel-input').style.display   = tab==='input'?'':'none';
+  document.getElementById('rpanel-timeline').style.display = tab==='timeline'?'':'none';
+  document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('rsubtab-'+tab).classList.add('active');
+  if(tab==='timeline'){
+    if(!document.getElementById('tlDate').value){
+      document.getElementById('tlDate').value = document.getElementById('rptDate').value || new Date().toISOString().slice(0,10);
+    }
+    renderTimeline();
+  }
+}
+
+// ── タイムスケジュール ──
+const TL_COLORS=['#16a34a','#2563eb','#9333ea','#d97706','#dc2626','#0891b2','#7c3aed','#c026d3','#059669','#0284c7'];
+const siteColorMap={};let siteColorIdx=0;
+function getSiteColor(site){if(!siteColorMap[site])siteColorMap[site]=TL_COLORS[siteColorIdx++%TL_COLORS.length];return siteColorMap[site];}
+
+function renderTimeline(){
+  const date=document.getElementById('tlDate').value;
+  const el=document.getElementById('timelineView');
+  if(!date){el.innerHTML='<div style="color:var(--text-muted);padding:20px">日付を選択してください</div>';return;}
+  const dayReports=reports.filter(r=>r.date===date);
+  if(!dayReports.length){el.innerHTML='<div style="color:var(--text-muted);padding:20px">この日の日報がありません</div>';return;}
+
+  // 表示時間範囲を自動計算
+  let minH=8,maxH=18;
+  dayReports.forEach(r=>r.rows.forEach(rw=>{
+    if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
+    if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
+  }));
+  const totalMins=(maxH-minH)*60;
+
+  // 時間軸ラベル
+  const axisLabels=[];
+  for(let h=minH;h<=maxH;h++) axisLabels.push(`<div class="timeline-hour-label">${h}:00</div>`);
+
+  // 作業員別行
+  const workerRows=dayReports.map(r=>{
+    const hasTimeData=r.rows.some(rw=>rw.startTime&&rw.endTime);
+    const blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
+      const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
+      const site=taskObj?getTaskNames(taskObj).main:(rw.taskName?rw.taskName.split(' ／ ')[0]:'現場未設定');
+      const[sh,sm]=rw.startTime.split(':').map(Number);
+      const[eh,em]=rw.endTime.split(':').map(Number);
+      const left=((sh*60+sm-minH*60)/totalMins*100).toFixed(2);
+      const width=(((eh*60+em)-(sh*60+sm))/totalMins*100).toFixed(2);
+      const color=getSiteColor(site);
+      return`<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color}" title="${site}　${rw.startTime}〜${rw.endTime}">${site}　${rw.startTime}〜${rw.endTime}</div>`;
+    }).join('');
+    return`<div class="timeline-worker-row">
+      <div class="timeline-worker-name">${r.worker}</div>
+      <div class="timeline-track">${blocks||`<span style="font-size:11px;color:var(--text-muted);padding:4px 10px;line-height:38px">${hasTimeData?'':'時刻データなし'}</span>`}</div>
+    </div>`;
+  }).join('');
+
+  // 凡例
+  const legend=Object.entries(siteColorMap).map(([site,color])=>
+    `<div class="timeline-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:${color};display:inline-block;flex-shrink:0"></span>${site}</div>`
+  ).join('');
+
+  el.innerHTML=`<div class="timeline-wrap">
+    <div class="timeline-axis" style="margin-left:100px">${axisLabels.join('')}</div>
+    ${workerRows}
+  </div>
+  <div class="timeline-legend">${legend}</div>`;
 }
 
 function cancelEditReport(){
