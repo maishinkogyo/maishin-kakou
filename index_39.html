@@ -216,13 +216,16 @@ select:focus,input:focus{border-color:var(--accent);}
 .report-subtab:hover{color:var(--text);}
 .report-subtab.active{color:var(--accent);border-bottom-color:var(--accent);}
 /* タイムスケジュール */
-.timeline-wrap{overflow-x:auto;padding-bottom:8px;}
-.timeline-axis{display:flex;margin-left:100px;margin-bottom:2px;}
-.timeline-hour-label{flex:1;font-size:10px;color:var(--text-muted);text-align:left;padding-left:2px;border-left:1px solid var(--border);}
-.timeline-worker-row{display:flex;align-items:stretch;margin-bottom:6px;min-height:44px;}
-.timeline-worker-name{width:100px;flex-shrink:0;font-size:12px;font-weight:700;padding:4px 8px 4px 0;display:flex;align-items:center;color:var(--text);}
-.timeline-track{flex:1;position:relative;background:var(--surface2);border-radius:6px;overflow:hidden;border:1px solid var(--border);}
-.timeline-block{position:absolute;top:3px;bottom:3px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.timeline-wrap{display:flex;overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
+.timeline-time-axis{flex-shrink:0;width:46px;border-right:1px solid var(--border);}
+.timeline-time-header{height:42px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.timeline-hour-mark{height:60px;font-size:10px;color:var(--text-muted);display:flex;align-items:flex-start;padding:3px 4px 0;border-top:1px solid var(--border);box-sizing:border-box;}
+.timeline-worker-col{flex:1;min-width:130px;display:flex;flex-direction:column;border-right:1px solid var(--border);}
+.timeline-worker-col:last-child{border-right:none;}
+.timeline-worker-name{height:42px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--text);border-bottom:1px solid var(--border);padding:0 4px;text-align:center;background:var(--surface2);}
+.timeline-track{flex:1;position:relative;background:var(--surface2);}
+.timeline-track-hour{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none;}
+.timeline-block{position:absolute;left:3px;right:3px;border-radius:4px;padding:3px 5px;font-size:10px;font-weight:600;color:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);line-height:1.3;box-sizing:border-box;}
 .timeline-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
 .timeline-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text);}
 /* ── Unit Sales ── */
@@ -2790,36 +2793,43 @@ function renderTimeline(){
   const dayReports=reports.filter(r=>r.date===date);
   if(!dayReports.length){el.innerHTML='<div style="color:var(--text-muted);padding:20px">この日の日報がありません</div>';return;}
 
-  // 表示時間範囲を自動計算
+  // 表示時間範囲を自動計算 (1時間=60px)
   let minH=8,maxH=18;
   dayReports.forEach(r=>r.rows.forEach(rw=>{
     if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
     if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
   }));
   const totalMins=(maxH-minH)*60;
+  const pxPerMin=1; // 1分=1px → 1時間=60px
+  const trackH=totalMins*pxPerMin;
 
-  // 時間軸ラベル
-  const axisLabels=[];
-  for(let h=minH;h<=maxH;h++) axisLabels.push(`<div class="timeline-hour-label">${h}:00</div>`);
+  // 左側：時間軸
+  const hourMarks=[];
+  for(let h=minH;h<=maxH;h++) hourMarks.push(`<div class="timeline-hour-mark">${h}:00</div>`);
+  const timeAxis=`<div class="timeline-time-axis"><div class="timeline-time-header"></div>${hourMarks.join('')}</div>`;
 
-  // 作業員別行
-  const workerRows=dayReports.map(r=>{
-    const hasTimeData=r.rows.some(rw=>rw.startTime&&rw.endTime);
+  // 時間グリッド線
+  const gridLines=[];
+  for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="timeline-track-hour" style="top:${(h-minH)*60}px"></div>`);
+
+  // 作業員別列
+  const workerCols=dayReports.map(r=>{
     const blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
       const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
       const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
       const[sh,sm]=rw.startTime.split(':').map(Number);
       const[eh,em]=rw.endTime.split(':').map(Number);
-      const left=((sh*60+sm-minH*60)/totalMins*100).toFixed(2);
-      const width=(((eh*60+em)-(sh*60+sm))/totalMins*100).toFixed(2);
+      const top=(sh*60+sm-minH*60)*pxPerMin;
+      const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
       const color=getSiteColor(site);
       const wt=(rw.workTypes||[]).join('・');
-      const label=wt?`${site}　${wt}　${rw.startTime}〜${rw.endTime}`:`${site}　${rw.startTime}〜${rw.endTime}`;
-      return`<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color}" title="${label}">${label}</div>`;
+      const label=wt?`${site}\n${wt}\n${rw.startTime}〜${rw.endTime}`:`${site}\n${rw.startTime}〜${rw.endTime}`;
+      const dispText=wt?`${site}　${wt}<br>${rw.startTime}〜${rw.endTime}`:`${site}<br>${rw.startTime}〜${rw.endTime}`;
+      return`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${color}" title="${label}">${dispText}</div>`;
     }).join('');
-    return`<div class="timeline-worker-row">
+    return`<div class="timeline-worker-col">
       <div class="timeline-worker-name">${r.worker}</div>
-      <div class="timeline-track">${blocks||`<span style="font-size:11px;color:var(--text-muted);padding:4px 10px;line-height:38px">${hasTimeData?'':'時刻データなし'}</span>`}</div>
+      <div class="timeline-track" style="height:${trackH}px">${gridLines.join('')}${blocks}</div>
     </div>`;
   }).join('');
 
@@ -2828,10 +2838,7 @@ function renderTimeline(){
     `<div class="timeline-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:${color};display:inline-block;flex-shrink:0"></span>${site}</div>`
   ).join('');
 
-  el.innerHTML=`<div class="timeline-wrap">
-    <div class="timeline-axis" style="margin-left:100px">${axisLabels.join('')}</div>
-    ${workerRows}
-  </div>
+  el.innerHTML=`<div class="timeline-wrap">${timeAxis}${workerCols}</div>
   <div class="timeline-legend">${legend}</div>`;
 }
 
