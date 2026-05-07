@@ -247,6 +247,46 @@ input,select,textarea{font-family:inherit;font-size:14px;}
   </div>
 </div>
 
+<!-- 現場詳細モーダル -->
+<div class="modal-overlay" id="siteDetailModal" style="z-index:600">
+  <div class="modal" style="max-width:640px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:800;color:var(--text)" id="sdTitle"></div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px" id="sdSub"></div>
+      </div>
+      <button onclick="closeModal('siteDetailModal')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);padding:0 4px;line-height:1">✕</button>
+    </div>
+    <div id="sdBadges" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+        <span>進捗</span><span id="sdPct" style="font-weight:700;color:var(--accent)"></span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="sdProgressFill"></div></div>
+    </div>
+
+    <div style="background:var(--surface2,#f8fafc);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px">📋 今日の進捗を入力</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;min-width:130px"><label>日付</label><input type="date" id="sdDate"></div>
+        <div class="form-group" style="margin:0;width:80px"><label>進捗（%）</label><input type="number" id="sdProgress" min="0" max="100" placeholder="0"></div>
+        <div class="form-group" style="margin:0;flex:1;min-width:120px"><label>作業内容</label><input type="text" id="sdContent" placeholder="例：基礎工事 など"></div>
+        <div class="form-group" style="margin:0;min-width:100px"><label>メモ</label><input type="text" id="sdNote" placeholder="任意"></div>
+        <button class="btn btn-primary btn-sm" style="margin-bottom:1px" onclick="saveSiteDetailRecord()">＋ 追加</button>
+      </div>
+    </div>
+
+    <div id="sdRecordList" style="max-height:220px;overflow-y:auto;margin-bottom:16px"></div>
+
+    <div class="modal-footer" style="padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-secondary btn-sm" onclick="openSiteModalFromDetail()">✏️ 現場情報を編集</button>
+      <button class="btn btn-sm" id="sdCompleteBtn" onclick="toggleSiteCompleteFromDetail()"></button>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" onclick="closeModal('siteDetailModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- 現場モーダル -->
 <div class="modal-overlay" id="siteModal">
   <div class="modal">
@@ -444,7 +484,7 @@ function renderSites(){
   document.getElementById('siteList').innerHTML=list.map(t=>{
     const prog=latestProgress(t.id),rec=latestRecord(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
     return`<div class="site-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px" onclick="goToSite(${t.id})" style="cursor:pointer">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
         <div style="flex:1;cursor:pointer" onclick="goToSite(${t.id})">
           <div class="site-name">${t.nameMain}</div>
           ${t.nameSub?`<div class="site-sub">${t.nameSub}</div>`:''}
@@ -531,11 +571,119 @@ async function deleteSite(id){
   flash();populateSelects();renderSites();renderAssign();
 }
 
+let detailSiteId=null;
+
 function goToSite(tid){
-  document.getElementById('wlTaskSel').value=tid;
-  document.getElementById('costTaskSel').value=tid;
-  showPage('worklog');
-  renderWorklog();
+  detailSiteId=tid;
+  const t=tasks.find(x=>x.id===tid);
+  const prog=latestProgress(tid);
+  const td=todayStr();
+
+  document.getElementById('sdTitle').textContent=t.nameMain;
+  document.getElementById('sdSub').textContent=t.nameSub||'';
+  document.getElementById('sdPct').textContent=prog+'%';
+  document.getElementById('sdProgressFill').style.width=prog+'%';
+
+  // バッジ
+  const ws=assignedWorkers(tid,td);
+  const cost=totalCost(tid);
+  const badges=[];
+  if(t.start_date) badges.push(`<span class="badge">開始 ${fmt(t.start_date)}</span>`);
+  if(t.deadline)   badges.push(`<span class="badge ${deadlineCls(t.deadline)}">期限 ${fmt(t.deadline)}</span>`);
+  if(ws.length)    badges.push(`<span class="badge blue">今日 ${ws.length}名</span>`);
+  if(cost>0)       badges.push(`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`);
+  if(t.complete)   badges.push(`<span class="badge green">完了</span>`);
+  document.getElementById('sdBadges').innerHTML=badges.join('');
+
+  // 完了/再開ボタン
+  const btn=document.getElementById('sdCompleteBtn');
+  btn.textContent=t.complete?'🔄 再開':'✅ 完了にする';
+  btn.style.background=t.complete?'#6b7280':'var(--accent)';
+  btn.style.color='#fff';
+
+  // 日付デフォルト
+  document.getElementById('sdDate').value=td;
+  document.getElementById('sdProgress').value=prog;
+  document.getElementById('sdContent').value='';
+  document.getElementById('sdNote').value='';
+
+  renderSiteDetailRecords();
+  openModal('siteDetailModal');
+}
+
+function renderSiteDetailRecords(){
+  const recs=workRecords.filter(r=>r.task_id===detailSiteId).sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('sdRecordList');
+  if(!recs.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px">記録がありません</div>';return;}
+  el.innerHTML=recs.map(r=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${fmt(r.date)}</span>
+      <span style="font-weight:700;color:var(--accent);white-space:nowrap;min-width:36px">${r.progress}%</span>
+      <span style="flex:1;font-size:13px">${r.content||''}</span>
+      <span style="font-size:12px;color:var(--text-muted)">${r.note||''}</span>
+      <button class="btn btn-secondary btn-sm" onclick="editSiteDetailRecord(${r.id})">編集</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSiteDetailRecord(${r.id})">削除</button>
+    </div>`).join('');
+}
+
+async function saveSiteDetailRecord(){
+  const date=document.getElementById('sdDate').value;
+  const progress=Number(document.getElementById('sdProgress').value)||0;
+  const content=document.getElementById('sdContent').value.trim();
+  const note=document.getElementById('sdNote').value.trim();
+  if(!date){alert('日付を入力してください');return;}
+  const payload={task_id:detailSiteId,date,progress,content,note};
+  const{data,error}=await sb.from('field_work_records').insert(payload).select().single();
+  if(error){alert('エラー: '+error.message);return;}
+  workRecords.unshift(data);
+  document.getElementById('sdContent').value='';
+  document.getElementById('sdNote').value='';
+  document.getElementById('sdProgress').value=progress;
+  const prog=latestProgress(detailSiteId);
+  document.getElementById('sdPct').textContent=prog+'%';
+  document.getElementById('sdProgressFill').style.width=prog+'%';
+  flash();renderSiteDetailRecords();renderSites();
+}
+
+function editSiteDetailRecord(id){
+  const r=workRecords.find(x=>x.id===id);
+  document.getElementById('sdDate').value=r.date;
+  document.getElementById('sdProgress').value=r.progress;
+  document.getElementById('sdContent').value=r.content||'';
+  document.getElementById('sdNote').value=r.note||'';
+  // 削除して再追加する形で編集
+  workRecords=workRecords.filter(x=>x.id!==id);
+  sb.from('field_work_records').delete().eq('id',id).then(()=>{});
+  renderSiteDetailRecords();
+}
+
+async function deleteSiteDetailRecord(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  const{error}=await sb.from('field_work_records').delete().eq('id',id);
+  if(error){alert('エラー: '+error.message);return;}
+  workRecords=workRecords.filter(r=>r.id!==id);
+  const prog=latestProgress(detailSiteId);
+  document.getElementById('sdPct').textContent=prog+'%';
+  document.getElementById('sdProgressFill').style.width=prog+'%';
+  flash();renderSiteDetailRecords();renderSites();
+}
+
+function openSiteModalFromDetail(){
+  closeModal('siteDetailModal');
+  openSiteModal(detailSiteId);
+}
+
+async function toggleSiteCompleteFromDetail(){
+  await toggleSiteComplete(detailSiteId);
+  const t=tasks.find(x=>x.id===detailSiteId);
+  const btn=document.getElementById('sdCompleteBtn');
+  btn.textContent=t.complete?'🔄 再開':'✅ 完了にする';
+  btn.style.background=t.complete?'#6b7280':'var(--accent)';
+  const badges=[];
+  if(t.start_date) badges.push(`<span class="badge">開始 ${fmt(t.start_date)}</span>`);
+  if(t.deadline)   badges.push(`<span class="badge ${deadlineCls(t.deadline)}">期限 ${fmt(t.deadline)}</span>`);
+  if(t.complete)   badges.push(`<span class="badge green">完了</span>`);
+  document.getElementById('sdBadges').innerHTML=badges.join('');
 }
 
 // ── 作業記録 ──
