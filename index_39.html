@@ -404,7 +404,7 @@ select:focus,input:focus{border-color:var(--accent);}
 <body>
 
 <!-- ── Lock Screen ── -->
-<!-- ══ タスク編集モーダル ══ -->
+<!-- ══ 現場編集モーダル ══ -->
 <div class="task-modal-overlay" id="taskModal" style="display:none;" onclick="closeTaskModal(event)">
   <div class="task-modal" onclick="event.stopPropagation()">
     <div class="task-modal-header">
@@ -506,7 +506,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <div><div class="next-task-name" id="nextTaskName">-</div><div class="next-task-meta" id="nextTaskMeta">-</div></div>
   </div>
   <div class="task-list-wrap">
-    <div class="section-title">タスク一覧（優先度順）</div>
+    <div class="section-title">現場一覧（優先度順）</div>
     <div id="taskList"></div>
   </div>
 </div>
@@ -557,7 +557,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="prod-section-title" style="margin-top:28px">月別　詳細テーブル</div>
     <div class="prod-table-wrap"><table class="prod-table" id="prodTable"></table></div>
     <div class="prod-section-title" style="margin-top:28px">
-      タスク別　数量内訳
+      現場別　数量内訳
       <div class="prod-ctrl-inline"><span class="ctrl-label">月</span><select id="prodMonthSel" onchange="renderTaskBreakdown()"></select></div>
     </div>
     <div class="prod-table-wrap"><table class="prod-table" id="taskBreakdownTable"></table></div>
@@ -572,7 +572,7 @@ select:focus,input:focus{border-color:var(--accent);}
 
     <!-- サブタブ -->
     <div class="master-subtabs">
-      <div class="master-subtab active" onclick="switchMasterTab('tasks')">➕ タスク追加</div>
+      <div class="master-subtab active" onclick="switchMasterTab('tasks')">➕ 現場追加</div>
       <div class="master-subtab" onclick="switchMasterTab('materials')">🔩 材料</div>
       <div class="master-subtab" onclick="switchMasterTab('vehicles')">🚛 車両</div>
       <div class="master-subtab" onclick="switchMasterTab('workers')">👤 作業者</div>
@@ -581,7 +581,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <!-- タスク追加パネル -->
     <div class="master-panel active" id="master-panel-tasks">
       <div style="margin-bottom:16px;">
-        <div class="section-title" style="padding-top:0;margin-bottom:16px;">新規タスクを追加</div>
+        <div class="section-title" style="padding-top:0;margin-bottom:16px;">新規現場を追加</div>
         <div class="add-form">
           <div class="form-group"><label>メイン項目</label><input type="text" id="newNameMain" placeholder="例：米子体育館"></div>
           <div class="form-group"><label>サブ項目</label><input type="text" id="newNameSub" placeholder="例：２階（任意）"></div>
@@ -865,7 +865,7 @@ select:focus,input:focus{border-color:var(--accent);}
 <!-- ══ 完了 ══ -->
 <div class="main-content" id="tab-done">
   <div class="task-list-wrap" style="padding-top:16px">
-    <div class="section-title">完了タスク</div>
+    <div class="section-title">完了現場</div>
     <div id="doneList"></div>
   </div>
 </div>
@@ -967,7 +967,7 @@ function renderWorkerTabs(){
 function setWorkerFilter(w){activeWorkerFilter=w;renderWorkerTabs();renderTaskList();}
 
 function deleteWorker(w){
-  if(!confirm(`「${w}」を作業者リストから削除しますか？\nタスクの担当から外れます。`))return;
+  if(!confirm(`「${w}」を作業者リストから削除しますか？\n現場の担当から外れます。`))return;
   workers=workers.filter(x=>x!==w);
   tasks.forEach(t=>{t.workers=t.workers.filter(x=>x!==w);});
   if(activeWorkerFilter===w)activeWorkerFilter='';
@@ -1027,7 +1027,7 @@ function renderWorkerMasterList(){
         <span style="font-size:18px">👤</span>
         <div style="flex:1;">
           <div style="font-weight:600;font-size:14px;">${w}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">担当中タスク ${taskCount}件</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">担当中現場 ${taskCount}件</div>
         </div>
         <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteWorker('${w}')">削除</button>
       </div>
@@ -1075,7 +1075,7 @@ async function addMaterial(){
 async function deleteMaterial(id){
   const m = materials.find(m=>m.id===id);
   if(!m) return;
-  if(!confirm(`「${m.name}」を削除しますか？\n使用中のタスクからも外れます。`)) return;
+  if(!confirm(`「${m.name}」を削除しますか？\n使用中の現場からも外れます。`)) return;
   materials = materials.filter(x=>x.id!==id);
   // タスクの材料名もクリア
   tasks.forEach(t=>{ if(t.material===m.name){ t.material=''; saveTask(t); } });
@@ -1132,7 +1132,7 @@ function renderMaterialList(){
           ${m.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${m.note}</div>`:''}
         </div>
         <span style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:3px 10px;border-radius:99px;white-space:nowrap;">
-          ${usedCount}件のタスクで使用中
+          ${usedCount}件の現場で使用中
         </span>
         <button class="btn btn-secondary btn-sm" onclick="editMaterial(${m.id})">✏️ 編集</button>
         <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteMaterial(${m.id})">削除</button>
@@ -1262,7 +1262,7 @@ function updateSummary(){
   const ta=tasks.reduce((s,t)=>s+t.total,0);
   const pct=ta>0?Math.round(td/ta*100):0;
   document.getElementById('summaryBar').innerHTML=`
-    <div class="stat-card"><div class="stat-label">残タスク</div><div class="stat-val accent">${active.length}</div></div>
+    <div class="stat-card"><div class="stat-label">残現場</div><div class="stat-val accent">${active.length}</div></div>
     <div class="stat-card"><div class="stat-label">完了</div><div class="stat-val ok">${done.length}</div></div>
     <div class="stat-card"><div class="stat-label">超過</div><div class="stat-val danger">${over.length}</div></div>
     <div class="stat-card"><div class="stat-label">要注意</div><div class="stat-val warn">${warn.length}</div></div>
@@ -1299,14 +1299,14 @@ function renderTaskList(){
   }else banner.style.display='none';
   document.getElementById('taskList').innerHTML=filtered.length
     ?filtered.map(taskCardHTML).join('')
-    :'<div style="color:var(--text-muted);padding:20px 0;text-align:center;">該当するタスクはありません</div>';
+    :'<div style="color:var(--text-muted);padding:20px 0;text-align:center;">該当する現場はありません</div>';
 }
 
 function renderDoneList(){
   const done=tasks.filter(t=>t.complete);
   document.getElementById('doneList').innerHTML=done.length
     ?done.map(taskCardHTML).join('')
-    :'<div style="color:var(--text-muted);padding:20px 0;text-align:center;">完了タスクはありません</div>';
+    :'<div style="color:var(--text-muted);padding:20px 0;text-align:center;">完了現場はありません</div>';
 }
 
 function taskCardHTML(t){
@@ -1678,8 +1678,8 @@ function showPdfMenu(){
     ov.id='pdfMenuOverlay';
     ov.style.cssText='position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);';
     const items=[
-      ['active',  '📋 タスク一覧（進行中）','A4 縦'],
-      ['done',    '✅ 完了タスク一覧',       'A4 縦'],
+      ['active',  '📋 現場一覧（進行中）','A4 縦'],
+      ['done',    '✅ 完了現場一覧',       'A4 縦'],
       ['gantt',   '📅 ガントチャート',        'A3 横'],
       ['production','📊 生産数量レポート',   'A4 横'],
       ['report',  '📝 日報',                 'A4 縦'],
@@ -1873,10 +1873,10 @@ function renderGantt(){
       <div class="gantt-month-strip" style="width:${totalW}px">${monthStrip}</div>
     </div>
     <div class="gantt-hrow2">
-      <div class="gantt-hlabel2">タスク</div>
+      <div class="gantt-hlabel2">現場</div>
       <div class="gantt-day-strip" style="width:${totalW}px">${dayStrip}</div>
     </div>
-    ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示するタスクがありません</div>'}
+    ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示する現場がありません</div>'}
   `;
 }
 
@@ -2059,7 +2059,7 @@ function renderYearCards(){
       <div class="year-card-row"><span class="year-card-lbl">総kg数</span><span class="year-card-val">${total.toLocaleString()}</span></div>
       <div class="year-card-row"><span class="year-card-lbl">完了kg数</span><span class="year-card-val c-done">${done.toLocaleString()}</span></div>
       <div class="year-card-row"><span class="year-card-lbl">達成率</span><span class="year-card-val c-pct">${pct}%</span></div>
-      <div class="year-card-row"><span class="year-card-lbl">タスク数</span><span class="year-card-val" style="font-size:14px">${tc}</span></div>
+      <div class="year-card-row"><span class="year-card-lbl">現場数</span><span class="year-card-val" style="font-size:14px">${tc}</span></div>
       <div class="year-card-bar-outer"><div class="year-card-bar-inner" style="width:${pct}%"></div></div>
     </div>`;
   }).join('')+'</div>';
@@ -2497,7 +2497,7 @@ async function syncToCloud(){
     const{error:e7}=await sb.from('meta').upsert([{key:'nextId',value:nextId},{key:'nextNum',value:nextNum}]);
     if(e7)throw new Error('meta: '+e7.message);
     hideLoading();
-    alert(`✅ 同期完了！\nタスク: ${tasks.length}件\n作業者: ${workers.length}名\n材料: ${materials.length}件\n車両: ${vehicles.length}件\n日報: ${reports.length}件`);
+    alert(`✅ 同期完了！\n現場: ${tasks.length}件\n作業者: ${workers.length}名\n材料: ${materials.length}件\n車両: ${vehicles.length}件\n日報: ${reports.length}件`);
   }catch(e){
     hideLoading();
     alert('同期失敗: '+(e.message||JSON.stringify(e)));
