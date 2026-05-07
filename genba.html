@@ -167,6 +167,8 @@ input,select,textarea{font-family:inherit;font-size:14px;}
             <option value="all">すべて</option>
             <option value="complete">完了済</option>
           </select>
+          <div class="spacer"></div>
+          <button class="btn btn-primary" onclick="openSiteModal()">＋ 現場追加</button>
         </div>
         <div id="siteList"></div>
       </div>
@@ -242,6 +244,26 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- 現場モーダル -->
+<div class="modal-overlay" id="siteModal">
+  <div class="modal">
+    <div class="modal-title" id="siteModalTitle">現場追加</div>
+    <input type="hidden" id="siteId">
+    <div class="form-row">
+      <div class="form-group"><label>現場名</label><input type="text" id="siteName" placeholder="例：○○邸新築工事"></div>
+      <div class="form-group"><label>サブ項目（任意）</label><input type="text" id="siteNameSub" placeholder="例：２階"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>開始日</label><input type="date" id="siteStart"></div>
+      <div class="form-group"><label>期限</label><input type="date" id="siteDeadline"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('siteModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveSite()">保存</button>
+    </div>
   </div>
 </div>
 
@@ -354,13 +376,13 @@ async function initApp(){
   document.getElementById('assignDate').value=todayStr();
   try{
     const[t,fw,asg,wr,c]=await Promise.all([
-      sb.from('tasks').select('*').order('num'),
+      sb.from('genba_tasks').select('*').order('num'),
       sb.from('field_workers').select('*').order('name'),
       sb.from('field_assignments').select('*'),
       sb.from('field_work_records').select('*').order('date',{ascending:false}),
       sb.from('field_costs').select('*').order('date',{ascending:false}),
     ]);
-    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||x.name,nameSub:x.name_sub||''}));
+    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||''}));
     fieldWorkers=fw.data||[];
     assignments=asg.data||[];
     workRecords=wr.data||[];
@@ -421,15 +443,22 @@ function renderSites(){
   }
   document.getElementById('siteList').innerHTML=list.map(t=>{
     const prog=latestProgress(t.id),rec=latestRecord(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
-    return`<div class="site-card" onclick="goToSite(${t.id})">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div>
+    return`<div class="site-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px" onclick="goToSite(${t.id})" style="cursor:pointer">
+        <div style="flex:1;cursor:pointer" onclick="goToSite(${t.id})">
           <div class="site-name">${t.nameMain}</div>
           ${t.nameSub?`<div class="site-sub">${t.nameSub}</div>`:''}
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:22px;font-weight:800;color:${prog>=100?'var(--accent)':'var(--text)'}">${prog}%</div>
-          <div style="font-size:10px;color:var(--text-muted)">進捗</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:800;color:${prog>=100?'var(--accent)':'var(--text)'}">${prog}%</div>
+            <div style="font-size:10px;color:var(--text-muted)">進捗</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <button class="btn btn-secondary btn-sm" onclick="openSiteModal(${t.id})">編集</button>
+            <button class="btn btn-sm" style="${t.complete?'background:#6b7280':'background:var(--accent)'};color:#fff" onclick="toggleSiteComplete(${t.id})">${t.complete?'再開':'完了'}</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSite(${t.id})">削除</button>
+          </div>
         </div>
       </div>
       <div class="badges">
@@ -439,12 +468,67 @@ function renderSites(){
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
         ${t.complete?`<span class="badge green">完了</span>`:''}
       </div>
-      <div class="progress-wrap">
+      <div class="progress-wrap" onclick="goToSite(${t.id})" style="cursor:pointer">
         <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
       </div>
       ${rec?`<div style="font-size:12px;color:var(--text-muted);margin-top:8px">📝 ${fmt(rec.date)} ${rec.content||''}</div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── 現場CRUD ──
+let editingSiteId=null;
+function openSiteModal(id=null){
+  editingSiteId=id;
+  document.getElementById('siteModalTitle').textContent=id?'現場を編集':'現場追加';
+  if(id){
+    const t=tasks.find(x=>x.id===id);
+    document.getElementById('siteId').value=id;
+    document.getElementById('siteName').value=t.nameMain;
+    document.getElementById('siteNameSub').value=t.nameSub||'';
+    document.getElementById('siteStart').value=t.start_date||'';
+    document.getElementById('siteDeadline').value=t.deadline||'';
+  }else{
+    document.getElementById('siteId').value='';
+    document.getElementById('siteName').value='';
+    document.getElementById('siteNameSub').value='';
+    document.getElementById('siteStart').value='';
+    document.getElementById('siteDeadline').value='';
+  }
+  openModal('siteModal');
+}
+async function saveSite(){
+  const name_main=document.getElementById('siteName').value.trim();
+  if(!name_main){alert('現場名を入力してください');return;}
+  const name_sub=document.getElementById('siteNameSub').value.trim();
+  const start_date=document.getElementById('siteStart').value||null;
+  const deadline=document.getElementById('siteDeadline').value||null;
+  if(editingSiteId){
+    const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
+    if(error){alert('更新失敗: '+error.message);return;}
+    const t=tasks.find(x=>x.id===editingSiteId);
+    Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline});
+  }else{
+    const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
+    const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
+    if(error){alert('追加失敗: '+error.message);return;}
+    tasks.push({...data,nameMain:data.name_main,nameSub:data.name_sub||''});
+  }
+  flash();closeModal('siteModal');populateSelects();renderSites();
+}
+async function toggleSiteComplete(id){
+  const t=tasks.find(x=>x.id===id);
+  const complete=!t.complete;
+  const{error}=await sb.from('genba_tasks').update({complete}).eq('id',id);
+  if(error){alert('更新失敗: '+error.message);return;}
+  t.complete=complete;
+  flash();populateSelects();renderSites();renderAssign();
+}
+async function deleteSite(id){
+  if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
+  await sb.from('genba_tasks').delete().eq('id',id);
+  tasks=tasks.filter(x=>x.id!==id);
+  flash();populateSelects();renderSites();renderAssign();
 }
 
 function goToSite(tid){
