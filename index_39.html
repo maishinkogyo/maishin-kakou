@@ -568,30 +568,47 @@ select:focus,input:focus{border-color:var(--accent);}
 <!-- ══ 生産数量 ══ -->
 <div class="main-content" id="tab-production">
   <div class="prod-wrap">
-    <div class="prod-section-title">年別　生産数量</div>
-    <div id="yearSummaryCards"></div>
-    <div class="prod-section-title" style="margin-top:28px">
-      月別　生産数量
-      <div class="prod-ctrl-inline">
-        <span class="ctrl-label">年</span><select id="prodYearSel" onchange="renderProduction()"></select>
-        <span class="ctrl-label" style="margin-left:8px">作業者</span><select id="prodWorkerSel" onchange="renderProduction()"><option value="">全員</option></select>
-        <span class="ctrl-label" style="margin-left:8px">表示</span>
-        <select id="prodViewMode" onchange="renderProduction()">
-          <option value="total">総kg数</option><option value="done" selected>完了kg数</option><option value="both">両方</option>
-        </select>
-      </div>
+    <!-- サブタブ -->
+    <div class="report-subtabs" style="margin-bottom:20px">
+      <div class="report-subtab active" id="prodsubtab-summary" onclick="switchProdTab('summary')">📊 生産数量</div>
+      <div class="report-subtab" id="prodsubtab-ayumi" onclick="switchProdTab('ayumi')">📋 歩掛り</div>
     </div>
-    <div class="prod-chart-wrap"><canvas id="prodBarCanvas"></canvas></div>
-    <div class="prod-section-title" style="margin-top:28px">月別　詳細テーブル</div>
-    <div class="prod-table-wrap"><table class="prod-table" id="prodTable"></table></div>
-    <div class="prod-section-title" style="margin-top:28px">
-      現場別　数量内訳
-      <div class="prod-ctrl-inline"><span class="ctrl-label">月</span><select id="prodMonthSel" onchange="renderTaskBreakdown()"></select></div>
-    </div>
-    <div class="prod-table-wrap"><table class="prod-table" id="taskBreakdownTable"></table></div>
 
-    <div class="prod-section-title" style="margin-top:28px">部門別　歩掛り</div>
-    <div class="prod-table-wrap"><table class="prod-table" id="deptBreakdownTable"></table></div>
+    <!-- 生産数量パネル -->
+    <div id="prod-panel-summary">
+      <div class="prod-section-title">年別　生産数量</div>
+      <div id="yearSummaryCards"></div>
+      <div class="prod-section-title" style="margin-top:28px">
+        月別　生産数量
+        <div class="prod-ctrl-inline">
+          <span class="ctrl-label">年</span><select id="prodYearSel" onchange="renderProduction()"></select>
+          <span class="ctrl-label" style="margin-left:8px">作業者</span><select id="prodWorkerSel" onchange="renderProduction()"><option value="">全員</option></select>
+          <span class="ctrl-label" style="margin-left:8px">表示</span>
+          <select id="prodViewMode" onchange="renderProduction()">
+            <option value="total">総kg数</option><option value="done" selected>完了kg数</option><option value="both">両方</option>
+          </select>
+        </div>
+      </div>
+      <div class="prod-chart-wrap"><canvas id="prodBarCanvas"></canvas></div>
+      <div class="prod-section-title" style="margin-top:28px">月別　詳細テーブル</div>
+      <div class="prod-table-wrap"><table class="prod-table" id="prodTable"></table></div>
+      <div class="prod-section-title" style="margin-top:28px">
+        現場別　数量内訳
+        <div class="prod-ctrl-inline"><span class="ctrl-label">月</span><select id="prodMonthSel" onchange="renderTaskBreakdown()"></select></div>
+      </div>
+      <div class="prod-table-wrap"><table class="prod-table" id="taskBreakdownTable"></table></div>
+    </div>
+
+    <!-- 歩掛りパネル -->
+    <div id="prod-panel-ayumi" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0"><label>月を選択</label>
+          <select id="ayumiMonthSel" onchange="renderDeptBreakdown()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;"></select>
+        </div>
+      </div>
+      <div class="prod-section-title" style="padding-top:0">部門別　歩掛り</div>
+      <div class="prod-table-wrap"><table class="prod-table" id="deptBreakdownTable"></table></div>
+    </div>
 
   </div>
 </div>
@@ -2331,11 +2348,27 @@ function renderTaskBreakdown(){
       <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${totP}%</td>
       <td></td>
     </tr></tfoot>`;
-  renderDeptBreakdown();
+}
+
+function switchProdTab(tab){
+  document.querySelectorAll('.report-subtab[id^="prodsubtab-"]').forEach(b=>b.classList.toggle('active',b.id==='prodsubtab-'+tab));
+  document.getElementById('prod-panel-summary').style.display=tab==='summary'?'':'none';
+  document.getElementById('prod-panel-ayumi').style.display=tab==='ayumi'?'':'none';
+  if(tab==='ayumi'){
+    // 月セレクト同期
+    const allData=getMonthlyData('','');
+    const months=Object.keys(allData).sort().reverse();
+    const sel=document.getElementById('ayumiMonthSel');
+    const cur=sel.value;
+    sel.innerHTML=months.map(mk=>{const[y,m]=mk.split('-');return`<option value="${mk}">${y}年${Number(m)}月</option>`;}).join('');
+    if(cur&&months.includes(cur))sel.value=cur;
+    renderDeptBreakdown();
+  }
 }
 
 function renderDeptBreakdown(){
-  const mk=document.getElementById('prodMonthSel').value;
+  const sel=document.getElementById('ayumiMonthSel');
+  const mk=sel?sel.value:document.getElementById('prodMonthSel')?.value;
   const el=document.getElementById('deptBreakdownTable');
   if(!mk){el.innerHTML='';return;}
 
