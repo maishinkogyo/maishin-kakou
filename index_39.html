@@ -2789,8 +2789,7 @@ function getSiteColor(site){if(!siteColorMap[site])siteColorMap[site]=TL_COLORS[
 function renderTimeline(){
   const date=document.getElementById('tlDate').value;
   const el=document.getElementById('timelineView');
-  if(!date){el.innerHTML='<div style="color:var(--text-muted);padding:20px">日付を選択してください</div>';return;}
-  const dayReports=reports.filter(r=>r.date===date);
+  const dayReports=date?reports.filter(r=>r.date===date):[];
 
   // 表示時間範囲を自動計算 (1時間=60px)
   let minH=8,maxH=18;
