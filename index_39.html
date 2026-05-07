@@ -210,6 +210,12 @@ select:focus,input:focus{border-color:var(--accent);}
 .report-work-chips{display:flex;gap:4px;flex-wrap:wrap;}
 .report-work-chip{font-size:11px;padding:1px 7px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);}
 @media(max-width:700px){.report-row{grid-template-columns:1fr auto;}.report-row-site{grid-column:1/-1;}}
+/* 日報編集モーダル */
+.rpt-edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;}
+.rpt-edit-modal{background:var(--surface);border-radius:14px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+.rpt-edit-modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rpt-edit-modal-body{overflow-y:auto;padding:20px;flex:1;}
+.rpt-edit-modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
 /* 日報ステータスタブ */
 .rpt-status-tab{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);transition:all .15s;}
 .rpt-status-tab:hover{border-color:var(--accent);color:var(--text);}
@@ -2800,53 +2806,133 @@ function resetReportForm(){
   addReportRow();
 }
 
+let editReportRowCount = 0;
+
+function addEditReportRow(){
+  const id = ++editReportRowCount;
+  const chips = WORK_TYPES.map(w=>`<span class="work-type-chip" onclick="toggleWorkType(this)">${w}</span>`).join('');
+  const row = document.createElement('div');
+  row.className = 'report-row';
+  row.innerHTML = `
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">現場</div>
+      <select style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+        <option value="">現場を選択</option>${getActiveTaskOptions()}
+      </select>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">作業内容</div>
+      <div class="work-types">${chips}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">作業時間</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        <input type="time" class="rpt-start" style="padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" oninput="calcRowHours(this.closest('.report-row'))">
+        <span style="font-size:12px;color:var(--text-muted)">〜</span>
+        <input type="time" class="rpt-end" style="padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" oninput="calcRowHours(this.closest('.report-row'))">
+        <span class="rpt-hours-disp" style="font-size:12px;font-weight:700;color:var(--accent);min-width:32px;">--</span>
+      </div>
+    </div>
+    <button onclick="this.closest('.report-row').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;margin-top:18px;">✕</button>`;
+  document.getElementById('editReportRows').appendChild(row);
+}
+
+function setEditReportStatus(status){
+  document.querySelectorAll('#rptEditModal .rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.estatus===status));
+  const isWork = status==='通常';
+  document.getElementById('editRptWorkSection').style.display  = isWork?'':'none';
+  document.getElementById('editRptExtraSection').style.display = isWork?'':'none';
+}
+
+function closeRptEditModal(e){
+  if(e && e.target !== document.getElementById('rptEditModal')) return;
+  document.getElementById('rptEditModal').style.display='none';
+  editingReportId = null;
+}
+
+async function saveReportEdit(){
+  const date   = document.getElementById('editRptDate').value;
+  const worker = document.getElementById('editRptWorker').value;
+  if(!date){alert('日付を入力してください');return;}
+  if(!worker){alert('作業者を選択してください');return;}
+
+  const status = document.querySelector('#rptEditModal .rpt-status-tab.active')?.dataset.estatus || '通常';
+
+  const rows = [];
+  document.querySelectorAll('#editReportRows .report-row').forEach(row=>{
+    const sel = row.querySelector('select');
+    const taskId = sel?.value ? Number(sel.value) : null;
+    const taskObj = taskId ? tasks.find(t=>t.id===taskId) : null;
+    const taskName = taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||'');
+    const wts = [...row.querySelectorAll('.work-type-chip.active')].map(c=>c.textContent);
+    const startTime = row.querySelector('.rpt-start')?.value||'';
+    const endTime   = row.querySelector('.rpt-end')?.value||'';
+    const hrs = calcHoursFromTimeRange(startTime, endTime);
+    if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
+  });
+
+  if(status==='通常' && !rows.length){alert('現場・作業時間を入力してください');return;}
+
+  const overtime = Number(document.getElementById('editRptOvertime').value)||0;
+  const late     = Number(document.getElementById('editRptLate').value)||0;
+  const early    = Number(document.getElementById('editRptEarly').value)||0;
+  const memo     = document.getElementById('editRptMemo').value.trim();
+
+  const rep = reports.find(r=>r.id===editingReportId);
+  if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, memo, status}); }
+  try{
+    const {error} = await sb.from('daily_reports').upsert({
+      id:editingReportId, date, worker, rows, overtime, late, early, memo, status
+    });
+    if(error) throw error;
+    flashSaved();
+  }catch(e){ console.error('日報更新失敗:',e); alert('更新失敗: '+e.message); return; }
+
+  saveLocal();
+  document.getElementById('rptEditModal').style.display='none';
+  editingReportId = null;
+  renderReportList();
+}
+
 function editReport(id, e){
   e.stopPropagation();
   const r = reports.find(r=>r.id===id); if(!r) return;
   editingReportId = id;
 
-  // フォームに値をセット
-  document.getElementById('rptDate').value = r.date;
-  const ws = document.getElementById('rptWorker');
+  // モーダルの値をセット
+  document.getElementById('editRptDate').value = r.date;
+  const ws = document.getElementById('editRptWorker');
+  ws.innerHTML = '<option value="">選択してください</option>' + workers.map(w=>`<option value="${w}">${w}</option>`).join('');
   ws.value = r.worker;
 
+  // ステータス
+  setEditReportStatus(r.status||'通常');
+
   // 行を再構築
-  document.getElementById('reportRows').innerHTML='';
-  reportRowCount=0;
+  document.getElementById('editReportRows').innerHTML='';
+  editReportRowCount=0;
   r.rows.forEach(rw=>{
-    addReportRow();
-    const rows = document.querySelectorAll('#reportRows .report-row');
+    addEditReportRow();
+    const rows = document.querySelectorAll('#editReportRows .report-row');
     const lastRow = rows[rows.length-1];
-    // タスク選択
     const sel = lastRow.querySelector('select');
     if(rw.taskId) sel.value = String(rw.taskId);
-    // 作業内容チップ
     lastRow.querySelectorAll('.work-type-chip').forEach(chip=>{
-      if(rw.workTypes.includes(chip.textContent)) chip.classList.add('active');
+      if((rw.workTypes||[]).includes(chip.textContent)) chip.classList.add('active');
     });
-    // 時間（開始〜終了）
     if(rw.startTime) lastRow.querySelector('.rpt-start').value = rw.startTime;
     if(rw.endTime)   lastRow.querySelector('.rpt-end').value   = rw.endTime;
     calcRowHours(lastRow);
   });
 
-  // ステータス
-  setReportStatus(r.status||'通常');
-
   // 残業・遅刻・早退・メモ
-  document.getElementById('rptOvertime').value = r.overtime||'';
-  document.getElementById('rptLate').value     = r.late||'';
-  document.getElementById('rptEarly').value    = r.early||'';
-  document.getElementById('rptMemo').value     = r.memo||'';
+  document.getElementById('editRptOvertime').value = r.overtime||'';
+  document.getElementById('editRptLate').value     = r.late||'';
+  document.getElementById('editRptEarly').value    = r.early||'';
+  document.getElementById('editRptMemo').value     = r.memo||'';
 
-  // ボタンを「更新」に切り替え
-  const btn = document.querySelector('.report-save-btn');
-  if(btn){ btn.textContent='💾 日報を更新'; btn.style.background='var(--ok)'; }
-  const cancelBtn = document.getElementById('rptCancelEdit');
-  if(cancelBtn) cancelBtn.style.display='inline-block';
-
-  // フォームまでスクロール
-  document.querySelector('.report-form-section').scrollIntoView({behavior:'smooth'});
+  // モーダルを開く
+  document.getElementById('rptEditModal').style.display='flex';
 }
 
 // ── 日報サブタブ ──
@@ -3791,6 +3877,43 @@ async function initApp(){
   render();
 }
 </script>
+
+<!-- 日報編集モーダル -->
+<div class="rpt-edit-overlay" id="rptEditModal" style="display:none;" onclick="closeRptEditModal(event)">
+  <div class="rpt-edit-modal" onclick="event.stopPropagation()">
+    <div class="rpt-edit-modal-header">
+      <span style="font-weight:700;font-size:15px;">✏️ 日報を編集</span>
+      <button onclick="closeRptEditModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:2px 6px;">✕</button>
+    </div>
+    <div class="rpt-edit-modal-body">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0"><label>日付</label><input type="date" id="editRptDate"></div>
+        <div class="form-group" style="margin:0"><label>作業者</label><select id="editRptWorker"><option value="">選択してください</option></select></div>
+      </div>
+      <div style="display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap;">
+        <button class="rpt-status-tab active" data-estatus="通常" onclick="setEditReportStatus('通常')">通常勤務</button>
+        <button class="rpt-status-tab" data-estatus="有給" onclick="setEditReportStatus('有給')">🌴 有給</button>
+        <button class="rpt-status-tab" data-estatus="欠勤" onclick="setEditReportStatus('欠勤')">欠勤</button>
+        <button class="rpt-status-tab" data-estatus="その他休日" onclick="setEditReportStatus('その他休日')">その他休日</button>
+      </div>
+      <div id="editRptWorkSection" style="margin-top:12px;">
+        <div id="editReportRows"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addEditReportRow()">＋ 現場を追加</button>
+      </div>
+      <div class="report-extra" id="editRptExtraSection" style="margin-top:12px;">
+        <div class="form-group"><label>残業時間</label><input type="number" id="editRptOvertime" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
+        <div class="form-group"><label>遅刻</label><input type="number" id="editRptLate" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
+        <div class="form-group"><label>早退</label><input type="number" id="editRptEarly" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
+        <div class="form-group"><label>メモ</label><input type="text" id="editRptMemo" placeholder="連絡事項など" style="width:200px"></div>
+      </div>
+    </div>
+    <div class="rpt-edit-modal-footer">
+      <button class="btn btn-primary" onclick="saveReportEdit()">💾 更新する</button>
+      <button class="btn btn-secondary" onclick="closeRptEditModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app-main -->
 </body>
 </html>
