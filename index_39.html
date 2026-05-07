@@ -186,7 +186,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .report-wrap{padding:16px 24px 32px;}
 .report-form-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;}
 .report-form-header{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
-.report-row{display:grid;grid-template-columns:180px 1fr 90px auto;gap:8px;align-items:start;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+.report-row{display:grid;grid-template-columns:180px 1fr 200px auto;gap:8px;align-items:start;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
 .report-row-site{font-weight:600;font-size:13px;}
 .work-types{display:flex;gap:6px;flex-wrap:wrap;}
 .work-type-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;color:var(--text-muted);transition:all .15s;user-select:none;}
@@ -2579,9 +2579,11 @@ function addReportRow(){
     </div>
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">作業時間</div>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <input type="number" placeholder="0" min="0" step="0.5" style="width:60px;padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
-        <span style="font-size:12px;color:var(--text-muted)">時間</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        <input type="time" class="rpt-start" style="padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" oninput="calcRowHours(this.closest('.report-row'))">
+        <span style="font-size:12px;color:var(--text-muted)">〜</span>
+        <input type="time" class="rpt-end" style="padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" oninput="calcRowHours(this.closest('.report-row'))">
+        <span class="rpt-hours-disp" style="font-size:12px;font-weight:700;color:var(--accent);min-width:32px;">--</span>
       </div>
     </div>
     <button onclick="this.closest('.report-row').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;margin-top:18px;">✕</button>`;
@@ -2590,6 +2592,22 @@ function addReportRow(){
 
 function toggleWorkType(el){
   el.classList.toggle('active');
+}
+
+function calcHoursFromTimeRange(start, end){
+  if(!start||!end) return 0;
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const diff=(eh*60+em)-(sh*60+sm);
+  return diff>0?Math.round(diff/6)/10:0;
+}
+
+function calcRowHours(row){
+  const s=row.querySelector('.rpt-start')?.value;
+  const e=row.querySelector('.rpt-end')?.value;
+  const h=calcHoursFromTimeRange(s,e);
+  const disp=row.querySelector('.rpt-hours-disp');
+  if(disp) disp.textContent=h>0?h+'h':'--';
 }
 
 let editingReportId = null; // 編集中の日報ID（nullなら新規）
@@ -2608,8 +2626,10 @@ async function saveReport(){
     const taskObj = taskId ? tasks.find(t=>t.id===taskId) : null;
     const taskName = taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||'');
     const wts = [...row.querySelectorAll('.work-type-chip.active')].map(c=>c.textContent);
-    const hrs = Number(row.querySelector('input[type="number"]')?.value)||0;
-    if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs});
+    const startTime = row.querySelector('.rpt-start')?.value||'';
+    const endTime   = row.querySelector('.rpt-end')?.value||'';
+    const hrs = calcHoursFromTimeRange(startTime, endTime);
+    if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
   });
 
   if(!rows.length){alert('現場・作業時間を入力してください');return;}
@@ -2688,8 +2708,10 @@ function editReport(id, e){
     lastRow.querySelectorAll('.work-type-chip').forEach(chip=>{
       if(rw.workTypes.includes(chip.textContent)) chip.classList.add('active');
     });
-    // 時間
-    lastRow.querySelector('input[type="number"]').value = rw.hours||'';
+    // 時間（開始〜終了）
+    if(rw.startTime) lastRow.querySelector('.rpt-start').value = rw.startTime;
+    if(rw.endTime)   lastRow.querySelector('.rpt-end').value   = rw.endTime;
+    calcRowHours(lastRow);
   });
 
   // 残業・遅刻・早退・メモ
