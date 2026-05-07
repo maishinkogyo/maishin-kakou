@@ -949,7 +949,15 @@ function taskFullName(t){const{main,sub}=getTaskNames(t);return main+(sub?' ／ 
 
 // ── Workers ──
 let workers = ['田中','鈴木','佐藤'];
+let workerRetireDates = {}; // {name: 'YYYY-MM-DD'}
 let activeWorkerFilter = '';
+
+function isWorkerActive(name){
+  const rd = workerRetireDates[name];
+  if(!rd) return true;
+  return rd >= new Date().toISOString().slice(0,10);
+}
+function activeWorkers(){ return workers.filter(isWorkerActive); }
 
 // ── Materials ──
 let materials = []; // {id, name, note}
@@ -992,7 +1000,7 @@ function renderWorkerTabs(){
   let html=`<div class="worker-chip-wrap">
     <div class="worker-chip no-del ${activeWorkerFilter===''?'active':''}" onclick="setWorkerFilter('')">👥 全員</div>
   </div>`;
-  workers.forEach(w=>{
+  activeWorkers().forEach(w=>{
     html+=`<div class="worker-chip-wrap">
       <div class="worker-chip no-del ${activeWorkerFilter===w?'active':''}" onclick="setWorkerFilter('${w}')">👤 ${w}</div>
     </div>`;
@@ -1019,7 +1027,7 @@ function syncWorkerSelects(){
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
     const base=id==='ganttWorker'?'<option value="">全員</option>':'<option value="">未割当</option>';
-    el.innerHTML=base+workers.map(w=>`<option value="${w}">${w}</option>`).join('');
+    el.innerHTML=base+activeWorkers().map(w=>`<option value="${w}">${w}</option>`).join('');
     if([...el.options].some(o=>o.value===cur))el.value=cur;
   });
   // 材料セレクトを同期
@@ -1057,19 +1065,62 @@ function renderWorkerMasterList(){
     el.innerHTML='<div style="color:var(--text-muted);padding:20px 0;text-align:center;">作業者がまだ登録されていません</div>';
     return;
   }
-  el.innerHTML = workers.map(w=>{
+  const today = new Date().toISOString().slice(0,10);
+  el.innerHTML = workers.map((w,idx)=>{
+    const active = isWorkerActive(w);
+    const rd = workerRetireDates[w];
     const taskCount = tasks.filter(t=>t.workers.includes(w)&&!t.complete).length;
-    return `<div class="task-card" style="margin-bottom:8px;">
-      <div style="padding:12px 14px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:18px">👤</span>
-        <div style="flex:1;">
-          <div style="font-weight:600;font-size:14px;">${w}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">担当中現場 ${taskCount}件</div>
+    return `<div class="task-card" style="margin-bottom:8px;${active?'':'opacity:.7'}">
+      <div style="padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:18px">${active?'👤':'👋'}</span>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-weight:600;font-size:14px;${active?'':'text-decoration:line-through;color:var(--text-muted)'}">${w}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${active?`担当中現場 ${taskCount}件`:`退職日: ${rd}`}</div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteWorker('${w}')">削除</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          ${active
+            ? `<div id="retireForm${idx}" style="display:none;align-items:center;gap:4px;">
+                <input type="date" id="retireDate${idx}" value="${today}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);">
+                <button class="btn btn-sm" style="background:#d97706;color:#fff;" onclick="confirmRetire(${idx})">確定</button>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('retireForm${idx}').style.display='none';document.getElementById('retireBtn${idx}').style.display=''">✕</button>
+              </div>
+              <button id="retireBtn${idx}" class="btn btn-secondary btn-sm" style="color:#d97706;" onclick="document.getElementById('retireForm${idx}').style.display='flex';this.style.display='none'">退職</button>`
+            : `<span style="font-size:11px;padding:3px 8px;background:#fef3c7;color:#92400e;border-radius:99px;font-weight:600;">退職済</span>
+               <button class="btn btn-secondary btn-sm" onclick="cancelRetire(${idx})">復帰</button>`
+          }
+          <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteWorker('${w}')">削除</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+async function confirmRetire(idx){
+  const w = workers[idx];
+  const date = document.getElementById('retireDate'+idx)?.value;
+  if(!date){ alert('退職日を選択してください'); return; }
+  workerRetireDates[w] = date;
+  saveLocal();
+  await saveRetireDateDb();
+  renderWorkerMasterList();
+  renderWorkerTabs();
+  syncWorkerSelects();
+  initReportTab();
+}
+async function cancelRetire(idx){
+  const w = workers[idx];
+  delete workerRetireDates[w];
+  saveLocal();
+  await saveRetireDateDb();
+  renderWorkerMasterList();
+  renderWorkerTabs();
+  syncWorkerSelects();
+  initReportTab();
+}
+async function saveRetireDateDb(){
+  try{
+    await sb.from('meta').upsert({key:'workerRetireDates', value:JSON.stringify(workerRetireDates)});
+  }catch(e){ console.warn('退職日DB保存失敗:',e); }
 }
 
 function showAddWorkerForm(){ document.getElementById('workerAddForm').style.display='block'; }
@@ -2403,8 +2454,10 @@ async function loadData(){
     }
     const ni = dbMeta.find(r=>r.key==='nextId');
     const nn = dbMeta.find(r=>r.key==='nextNum');
+    const wr = dbMeta.find(r=>r.key==='workerRetireDates');
     if(ni) nextId  = ni.value;
     if(nn) nextNum = nn.value;
+    if(wr) try{ workerRetireDates = JSON.parse(wr.value); }catch{}
     saveLocal();
   }catch(e){
     console.warn('Supabase接続失敗、ローカルキャッシュを使用:', e);
@@ -2414,6 +2467,7 @@ async function loadData(){
         const d = JSON.parse(raw);
         if(d.tasks)   tasks   = d.tasks.map((t,i)=>({...t, num:t.num??i+1, material:t.material||'', workers:t.workers||[], dailyLog:t.dailyLog||[], transportLog:t.transportLog||[]}));
         if(d.workers) workers = d.workers;
+        if(d.workerRetireDates) workerRetireDates = d.workerRetireDates;
         if(d.materials) { materials = d.materials; nextMatId = materials.length ? Math.max(...materials.map(m=>m.id))+1 : 1; }
         if(d.vehicles)  { vehicles  = d.vehicles;  nextVehId = vehicles.length  ? Math.max(...vehicles.map(v=>v.id))+1  : 1; }
         if(d.reports)   { reports   = d.reports;   nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1; }
@@ -2567,7 +2621,7 @@ function initReportTab(){
   // 作業者セレクト同期
   const ws = document.getElementById('rptWorker');
   const cur = ws.value;
-  ws.innerHTML = '<option value="">選択してください</option>' + workers.map(w=>`<option value="${w}">${w}</option>`).join('');
+  ws.innerHTML = '<option value="">選択してください</option>' + activeWorkers().map(w=>`<option value="${w}">${w}</option>`).join('');
   if(cur) ws.value = cur;
   // フィルター作業者セレクト
   const fw = document.getElementById('rptFilterWorker');
@@ -2811,7 +2865,7 @@ function renderTimeline(){
   for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="timeline-track-hour" style="top:${(h-minH)*60}px"></div>`);
 
   // 登録済み全作業員を列として表示（日報がない人も枠あり）
-  const workerCols=workers.map(wName=>{
+  const workerCols=activeWorkers().map(wName=>{
     const r=dayReports.find(rp=>rp.worker===wName);
     const blocks=r?r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
       const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
@@ -3601,7 +3655,7 @@ function renderPersonSummary(list, mf){
 // ── ローカルキャッシュ保存（パスワードのみ）──
 const STORAGE_KEY = 'taskManager_v1';
 const PW_KEY_LS   = 'taskManager_pw';
-function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks, workers, materials, vehicles, reports, sales, buyers, nextId, nextNum, nextMatId, nextVehId, nextReportId, nextSaleId, nextBuyerId})); }
+function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks, workers, workerRetireDates, materials, vehicles, reports, sales, buyers, nextId, nextNum, nextMatId, nextVehId, nextReportId, nextSaleId, nextBuyerId})); }
 
 // ══ LOCK / AUTH ══
 const PW_KEY = PW_KEY_LS;
