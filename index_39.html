@@ -2807,7 +2807,7 @@ function renderTimeline(){
     const hasTimeData=r.rows.some(rw=>rw.startTime&&rw.endTime);
     const blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
       const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
-      const site=taskObj?getTaskNames(taskObj).main:(rw.taskName?rw.taskName.split(' ／ ')[0]:'現場未設定');
+      const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
       const[sh,sm]=rw.startTime.split(':').map(Number);
       const[eh,em]=rw.endTime.split(':').map(Number);
       const left=((sh*60+sm-minH*60)/totalMins*100).toFixed(2);
