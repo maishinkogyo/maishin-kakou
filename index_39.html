@@ -2813,7 +2813,9 @@ function renderTimeline(){
       const left=((sh*60+sm-minH*60)/totalMins*100).toFixed(2);
       const width=(((eh*60+em)-(sh*60+sm))/totalMins*100).toFixed(2);
       const color=getSiteColor(site);
-      return`<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color}" title="${site}　${rw.startTime}〜${rw.endTime}">${site}　${rw.startTime}〜${rw.endTime}</div>`;
+      const wt=(rw.workTypes||[]).join('・');
+      const label=wt?`${site}　${wt}　${rw.startTime}〜${rw.endTime}`:`${site}　${rw.startTime}〜${rw.endTime}`;
+      return`<div class="timeline-block" style="left:${left}%;width:${width}%;background:${color}" title="${label}">${label}</div>`;
     }).join('');
     return`<div class="timeline-worker-row">
       <div class="timeline-worker-name">${r.worker}</div>
