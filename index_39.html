@@ -2579,25 +2579,51 @@ async function loadData(){
     if(e1) throw e1; if(e2) throw e2; if(e3) throw e3;
     tasks   = dbTasks.map(dbToTask);
     workers = dbWorkers.map(r=>r.name);
+    // ローカルキャッシュを先に読み込んでおき、DB成功分で上書きする（部分失敗でキャッシュを消さない）
+    let _cache = {};
+    try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw) _cache=JSON.parse(raw); }catch{}
     if(dbMats && !e4) {
       materials = dbMats.map(r=>({id:r.id, name:r.name, note:r.note||''}));
       nextMatId = materials.length ? Math.max(...materials.map(m=>m.id))+1 : 1;
+    } else if(e4 && _cache.materials) {
+      materials = _cache.materials; nextMatId = materials.length ? Math.max(...materials.map(m=>m.id))+1 : 1;
+      console.warn('materials DB失敗、キャッシュ使用:', e4.message);
     }
     if(dbVehs && !e5) {
       vehicles = dbVehs.map(r=>({id:r.id, name:r.name, note:r.note||''}));
       nextVehId = vehicles.length ? Math.max(...vehicles.map(v=>v.id))+1 : 1;
+    } else if(e5 && _cache.vehicles) {
+      vehicles = _cache.vehicles; nextVehId = vehicles.length ? Math.max(...vehicles.map(v=>v.id))+1 : 1;
+      console.warn('vehicles DB失敗、キャッシュ使用:', e5.message);
     }
     if(dbRpts && !e6) {
-      reports = dbRpts.map(r=>({id:r.id, date:r.date, worker:r.worker, rows:r.rows||[], overtime:r.overtime||0, late:r.late||0, early:r.early||0, memo:r.memo||''}));
+      reports = dbRpts.map(r=>({id:r.id, date:r.date, worker:r.worker, rows:r.rows||[], overtime:r.overtime||0, late:r.late||0, early:r.early||0, memo:r.memo||'', status:r.status||'通常'}));
       nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1;
+    } else if(e6 && _cache.reports) {
+      reports = _cache.reports; nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1;
+      console.warn('daily_reports DB失敗、キャッシュ使用:', e6.message);
     }
     if(dbSales && !e7) {
       sales = dbSales.map(r=>({id:r.id, date:r.date, taskId:r.task_id, taskName:r.task_name||'', buyer:r.buyer||'', kg:r.kg||0, amount:r.amount||0, memo:r.memo||'', status:r.status||'出荷済'}));
       nextSaleId = sales.length ? Math.max(...sales.map(s=>s.id))+1 : 1;
+    } else if(e7 && _cache.sales) {
+      sales = _cache.sales; nextSaleId = sales.length ? Math.max(...sales.map(s=>s.id))+1 : 1;
+      console.warn('unit_sales DB失敗、キャッシュ使用:', e7.message);
     }
     if(dbBuyers && !e8) {
-      buyers = dbBuyers.map(r=>({id:r.id, name:r.name, unitPrice:r.unit_price||0, mainItem:r.main_item||''}));
-      nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
+      if(dbBuyers.length > 0) {
+        buyers = dbBuyers.map(r=>({id:r.id, name:r.name, unitPrice:r.unit_price||0, mainItem:r.main_item||''}));
+        nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
+      } else if(_cache.buyers && _cache.buyers.length > 0) {
+        // Supabase空だがキャッシュにデータあり → 復元してDBに再同期
+        buyers = _cache.buyers;
+        nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
+        console.warn('buyers: Supabase空→ローカルキャッシュから復元し再同期します');
+        Promise.all(buyers.map(b=>sb.from('buyers').upsert({id:b.id,name:b.name,unit_price:b.unitPrice}))).catch(e=>console.warn('buyers再同期失敗:',e));
+      }
+    } else if(e8 && _cache.buyers) {
+      buyers = _cache.buyers; nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
+      console.warn('buyers DB失敗、キャッシュ使用:', e8.message);
     }
     const ni = dbMeta.find(r=>r.key==='nextId');
     const nn = dbMeta.find(r=>r.key==='nextNum');
