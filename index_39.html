@@ -2791,7 +2791,6 @@ function renderTimeline(){
   const el=document.getElementById('timelineView');
   if(!date){el.innerHTML='<div style="color:var(--text-muted);padding:20px">日付を選択してください</div>';return;}
   const dayReports=reports.filter(r=>r.date===date);
-  if(!dayReports.length){el.innerHTML='<div style="color:var(--text-muted);padding:20px">この日の日報がありません</div>';return;}
 
   // 表示時間範囲を自動計算 (1時間=60px)
   let minH=8,maxH=18;
@@ -2812,9 +2811,10 @@ function renderTimeline(){
   const gridLines=[];
   for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="timeline-track-hour" style="top:${(h-minH)*60}px"></div>`);
 
-  // 作業員別列
-  const workerCols=dayReports.map(r=>{
-    const blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
+  // 登録済み全作業員を列として表示（日報がない人も枠あり）
+  const workerCols=workers.map(wName=>{
+    const r=dayReports.find(rp=>rp.worker===wName);
+    const blocks=r?r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
       const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
       const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
       const[sh,sm]=rw.startTime.split(':').map(Number);
@@ -2826,9 +2826,9 @@ function renderTimeline(){
       const label=wt?`${site}\n${wt}\n${rw.startTime}〜${rw.endTime}`:`${site}\n${rw.startTime}〜${rw.endTime}`;
       const dispText=wt?`${site}　${wt}<br>${rw.startTime}〜${rw.endTime}`:`${site}<br>${rw.startTime}〜${rw.endTime}`;
       return`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${color}" title="${label}">${dispText}</div>`;
-    }).join('');
+    }).join(''):'';
     return`<div class="timeline-worker-col">
-      <div class="timeline-worker-name">${r.worker}</div>
+      <div class="timeline-worker-name">${wName}</div>
       <div class="timeline-track" style="height:${trackH}px">${gridLines.join('')}${blocks}</div>
     </div>`;
   }).join('');
