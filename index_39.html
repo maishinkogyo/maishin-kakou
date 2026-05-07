@@ -590,6 +590,9 @@ select:focus,input:focus{border-color:var(--accent);}
     </div>
     <div class="prod-table-wrap"><table class="prod-table" id="taskBreakdownTable"></table></div>
 
+    <div class="prod-section-title" style="margin-top:28px">部門別　歩掛り</div>
+    <div class="prod-table-wrap"><table class="prod-table" id="deptBreakdownTable"></table></div>
+
   </div>
 </div>
 
@@ -613,6 +616,15 @@ select:focus,input:focus{border-color:var(--accent);}
         <div class="add-form">
           <div class="form-group"><label>メイン項目</label><input type="text" id="newNameMain" placeholder="例：米子体育館"></div>
           <div class="form-group"><label>サブ項目</label><input type="text" id="newNameSub" placeholder="例：２階（任意）"></div>
+          <div class="form-group"><label>部門</label>
+            <select id="newDept">
+              <option value="">未設定</option>
+              <option value="建築">建築</option>
+              <option value="土木">土木</option>
+              <option value="住宅基礎">住宅基礎</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
           <div class="form-group"><label>優先度</label>
             <select id="newPriority"><option value="1">1（高）</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select>
           </div>
@@ -1523,6 +1535,15 @@ function taskDetailHTML(t){
       <!-- 基本情報編集 -->
       <div class="detail-field"><label>メイン項目</label><input type="text" value="${t.nameMain||t.name.split(' ／ ')[0]}" onchange="updateTaskName(${t.id},'main',this.value)"></div>
       <div class="detail-field"><label>サブ項目</label><input type="text" value="${t.nameSub||(t.name.includes(' ／ ')?t.name.split(' ／ ')[1]:'')||''}" placeholder="任意" onchange="updateTaskName(${t.id},'sub',this.value)"></div>
+      <div class="detail-field"><label>部門</label>
+        <select onchange="updateField(${t.id},'dept',this.value)">
+          <option value="" ${!t.dept?'selected':''}>未設定</option>
+          <option value="建築" ${'建築'===t.dept?'selected':''}>建築</option>
+          <option value="土木" ${'土木'===t.dept?'selected':''}>土木</option>
+          <option value="住宅基礎" ${'住宅基礎'===t.dept?'selected':''}>住宅基礎</option>
+          <option value="その他" ${'その他'===t.dept?'selected':''}>その他</option>
+        </select>
+      </div>
       <div class="detail-field"><label>材料名</label>
         <select onchange="updateField(${t.id},'material',this.value)">
           <option value="" ${!t.material?'selected':''}>未設定</option>
@@ -1743,7 +1764,8 @@ async function addTask(){
   const unit=document.getElementById('newUnitType').value||'none';
   const unitOtherNote=unit==='other'?(document.getElementById('newUnitOtherNote').value.trim()||''):'';
   const mat=document.getElementById('newMaterial').value;
-  const t={id:nextId++,num:nextNum++,name,nameMain,nameSub,material:mat,priority:Number(document.getElementById('newPriority').value),
+  const dept=document.getElementById('newDept').value||'';
+  const t={id:nextId++,num:nextNum++,name,nameMain,nameSub,dept,material:mat,priority:Number(document.getElementById('newPriority').value),
     total:Number(document.getElementById('newTotal').value)||0,done:0,
     deadline:document.getElementById('newDeadline').value||null,
     start:document.getElementById('newStart').value||null,
@@ -1767,6 +1789,7 @@ async function addTask(){
   }
 
   ['newNameMain','newNameSub','newTotal','newDeadline','newStart','newUnitOtherNote','newSaleKg','newSaleAmount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('newDept').value='';;
   document.getElementById('newUnitType').value='none';
   document.querySelectorAll('#newUnitTabs .unit-tab').forEach(el=>el.classList.remove('active'));
   document.querySelector('#newUnitTabs .none-tab').classList.add('active');
@@ -2308,6 +2331,77 @@ function renderTaskBreakdown(){
       <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${totP}%</td>
       <td></td>
     </tr></tfoot>`;
+  renderDeptBreakdown();
+}
+
+function renderDeptBreakdown(){
+  const mk=document.getElementById('prodMonthSel').value;
+  const el=document.getElementById('deptBreakdownTable');
+  if(!mk){el.innerHTML='';return;}
+
+  // 月の日報から人工を集計（taskId → dept 経由）
+  const [y,m]=mk.split('-');
+  const monthReports=reports.filter(r=>r.date&&r.date.startsWith(mk)&&(!r.status||r.status==='通常'));
+
+  // 全タスクのdept マップ
+  const taskDeptMap={};
+  tasks.forEach(t=>{if(t.dept)taskDeptMap[t.id]=t.dept;});
+
+  // 月の加工量を部門別に集計（dailyLog から当月分）
+  const deptKg={};
+  tasks.forEach(t=>{
+    if(!t.dept)return;
+    const monthLog=(t.dailyLog||[]).filter(e=>e.date&&e.date.startsWith(mk));
+    const kg=monthLog.reduce((s,e)=>s+Number(e.amount||0),0);
+    deptKg[t.dept]=(deptKg[t.dept]||0)+kg;
+  });
+
+  // 月の人工を部門別に集計（日報のrows.taskId から dept を引く）
+  const deptHours={};
+  monthReports.forEach(r=>{
+    (r.rows||[]).forEach(rw=>{
+      const dept=rw.taskId?taskDeptMap[rw.taskId]:null;
+      if(!dept)return;
+      deptHours[dept]=(deptHours[dept]||0)+(rw.hours||0);
+    });
+  });
+
+  const DEPTS=['建築','土木','住宅基礎','その他'];
+  const activeDepts=DEPTS.filter(d=>deptKg[d]||deptHours[d]);
+  if(!activeDepts.length){
+    el.innerHTML='<tr><td style="padding:16px;color:var(--text-muted)">部門が設定された現場のデータがありません</td></tr>';
+    return;
+  }
+
+  const thead=`<thead><tr>
+    <th>部門</th>
+    <th style="text-align:right">加工数量(kg)</th>
+    <th style="text-align:right">人工数</th>
+    <th style="text-align:right">歩掛り(kg/人工)</th>
+  </tr></thead>`;
+
+  let totKg=0,totH=0;
+  const rows=activeDepts.map(d=>{
+    const kg=Math.round(deptKg[d]||0);
+    const mandays=((deptHours[d]||0)/7);
+    const ayumi=mandays>0?(kg/mandays).toFixed(1):'-';
+    totKg+=kg; totH+=(deptHours[d]||0);
+    return`<tr>
+      <td style="font-weight:600;padding:9px 14px">${d}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${kg.toLocaleString()}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace">${mandays.toFixed(1)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${ayumi}</td>
+    </tr>`;
+  }).join('');
+
+  const totMandays=(totH/7);
+  const totAyumi=totMandays>0?(totKg/totMandays).toFixed(1):'-';
+  el.innerHTML=thead+`<tbody>${rows}</tbody><tfoot><tr>
+    <td style="font-weight:700">合計</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${Math.round(totKg).toLocaleString()}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${totMandays.toFixed(1)}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${totAyumi}</td>
+  </tr></tfoot>`;
 }
 
 function renderProduction(){
@@ -2377,7 +2471,7 @@ function dbToTask(r){
   const nameSub  = r.name_sub  || (r.name&&r.name.includes(' ／ ') ? r.name.split(' ／ ').slice(1).join(' ／ ') : '') || '';
   return {
     id:r.id, num:r.num??r.id, name:r.name,
-    nameMain, nameSub,
+    nameMain, nameSub, dept:r.dept||'',
     material:r.material||'',
     priority:r.priority??null,
     total:r.total??0, done:r.done??0,
@@ -2389,7 +2483,7 @@ function dbToTask(r){
 function taskToDb(t){
   return {
     id:t.id, num:t.num, name:t.name,
-    name_main:t.nameMain||null, name_sub:t.nameSub||null,
+    name_main:t.nameMain||null, name_sub:t.nameSub||null, dept:t.dept||'',
     material:t.material||null,
     priority:t.priority,
     total:t.total, done:t.done,
