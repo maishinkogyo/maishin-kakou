@@ -1416,16 +1416,6 @@ function taskDetailHTML(t){
           <input type="text" id="dlog-note-${t.id}" class="note-input" placeholder="メモ（任意）">
           <button class="btn btn-primary btn-sm" onclick="addDailyLog(${t.id})">＋ 追加</button>
         </div>
-        ${t.workers.length?`
-        <div class="worker-hours-title">⏱ 作業時間（人別・任意）</div>
-        <div class="worker-hours-rows">
-          ${t.workers.map(w=>`
-          <div class="worker-hours-row">
-            <span class="wh-name">👤 ${w}</span>
-            <input type="number" id="dlog-wh-${t.id}-${w.replace(/[^a-zA-Z0-9]/g,'_')}" placeholder="0" min="0" step="0.5">
-            <span class="wh-unit">時間</span>
-          </div>`).join('')}
-        </div>`:''}
         ${logs.length?`<div class="daily-log-list">${logItems}</div>`:'<div style="font-size:11px;color:var(--text-muted)">まだ記録がありません</div>'}
       </div>
 
