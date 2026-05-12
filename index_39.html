@@ -3793,18 +3793,22 @@ function getMonthDays(mf){
 
 // 横軸：日付、縦軸：現場の集計表を生成
 function buildSiteTable(list, days, filterWorker=''){
-  // {site: {date: hours}} の形に集計
+  // {site: {date: hours}} と {site: {worker: {date: hours}}} を同時に集計
   const siteMap = {};
+  const siteWorkerMap = {}; // {site: {worker: {date: hours}}}
   list.forEach(r=>{
     if(filterWorker && r.worker !== filterWorker) return;
     r.rows.forEach(rw=>{
       if(!rw.hours||rw.hours<=0) return;
-      // メイン項目名を取得（taskIdからnameMainを引く、なければtaskNameを分割）
       const taskObj = rw.taskId ? tasks.find(t=>t.id===rw.taskId) : null;
       const rawName = rw.taskName||'現場未設定';
       const site=taskObj?getTaskNames(taskObj).main:(rawName.includes(' ／ ')?rawName.split(' ／ ')[0]:rawName);
       if(!siteMap[site]) siteMap[site]={};
       siteMap[site][r.date] = (siteMap[site][r.date]||0) + rw.hours;
+      // 作業者別内訳
+      if(!siteWorkerMap[site]) siteWorkerMap[site]={};
+      if(!siteWorkerMap[site][r.worker]) siteWorkerMap[site][r.worker]={};
+      siteWorkerMap[site][r.worker][r.date] = (siteWorkerMap[site][r.worker][r.date]||0) + rw.hours;
     });
   });
 
@@ -3812,6 +3816,7 @@ function buildSiteTable(list, days, filterWorker=''){
   if(!sites.length) return '<div style="color:var(--text-muted);padding:12px;">データがありません</div>';
 
   // ヘッダー行（日付）
+  const colCount = days.length + 3; // 現場名 + 日付列 + 合計 + 人工
   const dayHeaders = days.map(d=>{
     const day = Number(d.split('-')[2]);
     const dow = ['日','月','火','水','木','金','土'][new Date(d).getDay()];
@@ -3820,20 +3825,51 @@ function buildSiteTable(list, days, filterWorker=''){
     return`<th style="min-width:36px;text-align:center;font-size:11px;padding:4px 2px;${isRed?'color:var(--danger);':isWeekend?'color:var(--accent);':''}">${day}<br><span style="font-size:9px">${dow}</span></th>`;
   }).join('');
 
-  // データ行（現場ごと）
+  // データ行（現場ごと）＋内訳行
+  let siteIdx = 0;
   const dataRows = sites.map(site=>{
     const rowTotal = days.reduce((s,d)=>s+(siteMap[site][d]||0),0);
-    if(!rowTotal) return ''; // 0の行は省略
+    if(!rowTotal) return '';
+    const idx = siteIdx++;
+    const detailId = `siteDetail_${idx}`;
     const cells = days.map(d=>{
       const v = siteMap[site][d]||0;
       return`<td style="text-align:center;font-size:12px;font-family:'DM Mono',monospace;padding:4px 2px;${v>0?'color:var(--accent);font-weight:700;':''}">${v>0?v:''}</td>`;
     }).join('');
     const manDays = (rowTotal/7).toFixed(1);
-    return`<tr>
-      <td style="font-size:12px;padding:5px 10px;white-space:nowrap;font-weight:600;border-right:2px solid var(--border);">${site}</td>
+
+    // 内訳行（作業者別）
+    const workerMap = siteWorkerMap[site]||{};
+    const workerNames = Object.keys(workerMap).sort();
+    const detailRows = workerNames.map(wk=>{
+      const wTotal = days.reduce((s,d)=>s+(workerMap[wk][d]||0),0);
+      if(!wTotal) return '';
+      const wCells = days.map(d=>{
+        const v = workerMap[wk][d]||0;
+        return`<td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;padding:3px 2px;color:${v>0?'var(--text)':'var(--text-muted)'};">${v>0?v:''}</td>`;
+      }).join('');
+      return`<tr style="background:var(--surface2);">
+        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);">👤 ${wk}</td>
+        ${wCells}
+        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:2px solid var(--border);">${wTotal}</td>
+        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:1px solid var(--border);">${(wTotal/7).toFixed(1)}</td>
+      </tr>`;
+    }).join('');
+
+    return`<tr style="cursor:pointer;" onclick="toggleSiteDetail('${detailId}',this)">
+      <td style="font-size:12px;padding:5px 10px;white-space:nowrap;font-weight:600;border-right:2px solid var(--border);">
+        <span class="site-detail-arrow" style="font-size:10px;margin-right:4px;color:var(--text-muted);">▶</span>${site}
+      </td>
       ${cells}
       <td style="text-align:center;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--ok);padding:4px 6px;border-left:2px solid var(--border);">${rowTotal}</td>
       <td style="text-align:center;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--text-muted);padding:4px 6px;border-left:1px solid var(--border);">${manDays}</td>
+    </tr>
+    <tr id="${detailId}" style="display:none;">
+      <td colspan="${colCount}" style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;border-top:1px dashed var(--border);">
+          <tbody>${detailRows}</tbody>
+        </table>
+      </td>
     </tr>`;
   }).join('');
 
@@ -3848,7 +3884,7 @@ function buildSiteTable(list, days, filterWorker=''){
     <table style="border-collapse:collapse;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
       <thead>
         <tr style="background:var(--surface2);">
-          <th style="text-align:left;padding:6px 10px;font-size:12px;min-width:140px;border-right:2px solid var(--border);">現場</th>
+          <th style="text-align:left;padding:6px 10px;font-size:12px;min-width:140px;border-right:2px solid var(--border);">現場　<span style="font-size:10px;font-weight:400;color:var(--text-muted);">（クリックで内訳）</span></th>
           ${dayHeaders}
           <th style="text-align:center;padding:4px 6px;font-size:12px;border-left:2px solid var(--border);color:var(--ok);">合計時間</th>
           <th style="text-align:center;padding:4px 6px;font-size:12px;border-left:1px solid var(--border);color:var(--text-muted);">人工</th>
@@ -3865,6 +3901,15 @@ function buildSiteTable(list, days, filterWorker=''){
       </tfoot>
     </table>
   </div>`;
+}
+
+function toggleSiteDetail(id, row){
+  const detail = document.getElementById(id);
+  if(!detail) return;
+  const arrow = row.querySelector('.site-detail-arrow');
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : '';
+  if(arrow) arrow.textContent = isOpen ? '▶' : '▼';
 }
 
 function renderDailySummary(list, mf){
