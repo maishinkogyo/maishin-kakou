@@ -2812,6 +2812,13 @@ function getActiveTaskOptions(){
   return tasks.filter(t=>!t.complete).sort((a,b)=>(a.num??a.id)-(b.num??b.id)).map(t=>`<option value="${t.id}">No.${t.num??t.id}　${taskFullName(t)}</option>`).join('');
 }
 
+function onRptSiteChange(sel){
+  const inp = sel.closest('div').querySelector('.rpt-other-name');
+  if(!inp) return;
+  inp.style.display = sel.value==='__other__' ? '' : 'none';
+  if(sel.value==='__other__') inp.focus();
+}
+
 function syncReportTaskSelects(){
   // 日報タブが開いている場合、全行のセレクトを同期
   document.querySelectorAll('#reportRows .report-row select').forEach(sel=>{
@@ -2835,9 +2842,10 @@ function addReportRow(){
   row.innerHTML = `
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">現場</div>
-      <select style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-        <option value="">現場を選択</option>${getActiveTaskOptions()}
+      <select onchange="onRptSiteChange(this)" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+        <option value="">現場を選択</option>${getActiveTaskOptions()}<option value="__other__">その他</option>
       </select>
+      <input type="text" class="rpt-other-name" placeholder="内容を手入力" style="display:none;margin-top:4px;width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;">
     </div>
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">作業内容</div>
@@ -2889,14 +2897,17 @@ async function saveReport(){
   const rows = [];
   document.querySelectorAll('#reportRows .report-row').forEach(row=>{
     const sel   = row.querySelector('select');
-    const taskId = sel?.value ? Number(sel.value) : null;
+    const isOther = sel?.value === '__other__';
+    const taskId = (!isOther && sel?.value) ? Number(sel.value) : null;
     const taskObj = taskId ? tasks.find(t=>t.id===taskId) : null;
-    const taskName = taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||'');
+    const taskName = isOther
+      ? (row.querySelector('.rpt-other-name')?.value.trim() || 'その他')
+      : (taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||''));
     const wts = [...row.querySelectorAll('.work-type-chip.active')].map(c=>c.textContent);
     const startTime = row.querySelector('.rpt-start')?.value||'';
     const endTime   = row.querySelector('.rpt-end')?.value||'';
     const hrs = calcHoursFromTimeRange(startTime, endTime);
-    if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
+    if(taskId||isOther||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
   });
 
   const status = '通常';
@@ -3008,9 +3019,10 @@ function addEditReportRow(){
   row.innerHTML = `
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">現場</div>
-      <select style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-        <option value="">現場を選択</option>${getActiveTaskOptions()}
+      <select onchange="onRptSiteChange(this)" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+        <option value="">現場を選択</option>${getActiveTaskOptions()}<option value="__other__">その他</option>
       </select>
+      <input type="text" class="rpt-other-name" placeholder="内容を手入力" style="display:none;margin-top:4px;width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;">
     </div>
     <div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">作業内容</div>
@@ -3047,14 +3059,17 @@ async function saveReportEdit(){
   const rows = [];
   document.querySelectorAll('#editReportRows .report-row').forEach(row=>{
     const sel = row.querySelector('select');
-    const taskId = sel?.value ? Number(sel.value) : null;
+    const isOther = sel?.value === '__other__';
+    const taskId = (!isOther && sel?.value) ? Number(sel.value) : null;
     const taskObj = taskId ? tasks.find(t=>t.id===taskId) : null;
-    const taskName = taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||'');
+    const taskName = isOther
+      ? (row.querySelector('.rpt-other-name')?.value.trim() || 'その他')
+      : (taskObj ? taskObj.name : (sel?.options[sel.selectedIndex]?.text||''));
     const wts = [...row.querySelectorAll('.work-type-chip.active')].map(c=>c.textContent);
     const startTime = row.querySelector('.rpt-start')?.value||'';
     const endTime   = row.querySelector('.rpt-end')?.value||'';
     const hrs = calcHoursFromTimeRange(startTime, endTime);
-    if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
+    if(taskId||isOther||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
   });
 
   if(!rows.length){alert('現場・作業時間を入力してください');return;}
@@ -3101,7 +3116,13 @@ function editReport(id, e){
     const rows = document.querySelectorAll('#editReportRows .report-row');
     const lastRow = rows[rows.length-1];
     const sel = lastRow.querySelector('select');
-    if(rw.taskId) sel.value = String(rw.taskId);
+    if(rw.taskId){
+      sel.value = String(rw.taskId);
+    } else if(rw.taskName){
+      sel.value = '__other__';
+      const inp = lastRow.querySelector('.rpt-other-name');
+      if(inp){ inp.style.display=''; inp.value=rw.taskName; }
+    }
     lastRow.querySelectorAll('.work-type-chip').forEach(chip=>{
       if((rw.workTypes||[]).includes(chip.textContent)) chip.classList.add('active');
     });
