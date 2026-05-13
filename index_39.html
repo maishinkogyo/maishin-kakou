@@ -795,6 +795,14 @@ select:focus,input:focus{border-color:var(--accent);}
       <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addReportRow()">＋ 現場を追加</button>
       </div>
 
+      <!-- 有給・欠勤・その他休日の時間帯 -->
+      <div id="rptStatusTimeSection" style="display:none;margin-top:12px;">
+        <div class="report-extra" style="margin-top:0;padding-top:0;border-top:none;">
+          <div class="form-group"><label id="rptStatusTimeLabel" style="min-width:4em;">時間帯</label><div class="rpt-time-range"><input type="time" id="rptStatusTimeStart" oninput="updateRptTimeHint('rptStatusTimeStart','rptStatusTimeEnd','rptStatusTimeHint')"><span>〜</span><input type="time" id="rptStatusTimeEnd" oninput="updateRptTimeHint('rptStatusTimeStart','rptStatusTimeEnd','rptStatusTimeHint')"><span class="rpt-time-hint" id="rptStatusTimeHint"></span></div></div>
+          <div class="form-group"><label>メモ</label><input type="text" id="rptStatusMemo" placeholder="連絡事項など" style="width:200px"></div>
+        </div>
+      </div>
+
       <!-- 残業・有給・遅刻・早退 -->
       <div class="report-extra" id="rptExtraSection">
         <div class="form-group"><label>残業</label><div class="rpt-time-range"><input type="time" id="rptOvertimeStart" oninput="updateRptTimeHint('rptOvertimeStart','rptOvertimeEnd','rptOvertimeHint')"><span>〜</span><input type="time" id="rptOvertimeEnd" oninput="updateRptTimeHint('rptOvertimeStart','rptOvertimeEnd','rptOvertimeHint')"><span class="rpt-time-hint" id="rptOvertimeHint"></span></div></div>
@@ -2885,12 +2893,29 @@ function calcRowHours(row){
 let editingReportId = null; // 編集中の日報ID（nullなら新規）
 let currentReportStatus = '通常';
 
+const STATUS_TIME_LABELS={'有給':'有給時間帯','欠勤':'欠勤時間帯','その他休日':'休日時間帯'};
 function setReportStatus(status){
   currentReportStatus = status;
   document.querySelectorAll('.rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.status===status));
   const isWork = status==='通常';
-  document.getElementById('rptWorkSection').style.display  = isWork?'':'none';
-  document.getElementById('rptExtraSection').style.display = isWork?'':'none';
+  document.getElementById('rptWorkSection').style.display       = isWork?'':'none';
+  document.getElementById('rptExtraSection').style.display      = isWork?'':'none';
+  document.getElementById('rptStatusTimeSection').style.display = isWork?'none':'';
+  if(!isWork){
+    const lbl=document.getElementById('rptStatusTimeLabel');
+    if(lbl) lbl.textContent=STATUS_TIME_LABELS[status]||'時間帯';
+  }
+}
+function setEditReportStatus(status){
+  document.querySelectorAll('#rptEditModal .rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.estatus===status));
+  const isWork = status==='通常';
+  document.getElementById('editRptWorkSection').style.display       = isWork?'':'none';
+  document.getElementById('editRptExtraSection').style.display      = isWork?'':'none';
+  document.getElementById('editRptStatusTimeSection').style.display = isWork?'none':'';
+  if(!isWork){
+    const lbl=document.getElementById('editRptStatusTimeLabel');
+    if(lbl) lbl.textContent=STATUS_TIME_LABELS[status]||'時間帯';
+  }
 }
 
 async function saveReport(){
@@ -2921,7 +2946,9 @@ async function saveReport(){
   const late       = timeRangeToHours(...(extraTimes.late.split('-')));
   const early      = timeRangeToHours(...(extraTimes.early.split('-')));
   const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
-  const memo       = document.getElementById('rptMemo').value.trim();
+  const memo = status==='通常'
+    ? (document.getElementById('rptMemo').value.trim())
+    : (extraTimes.statusMemo||'');
 
   if(editingReportId !== null){
     // 更新モード
@@ -2982,22 +3009,26 @@ function getExtraTimes(prefix){
   const g=(id)=>document.getElementById(prefix+id)?.value||'';
   const mk=(s,e)=>(s&&e)?`${s}-${e}`:'';
   return {
-    overtime:  mk(g('OvertimeStart'),  g('OvertimeEnd')),
-    paidLeave: mk(g('PaidLeaveStart'), g('PaidLeaveEnd')),
-    late:      mk(g('LateStart'),      g('LateEnd')),
-    early:     mk(g('EarlyStart'),     g('EarlyEnd')),
+    overtime:    mk(g('OvertimeStart'),    g('OvertimeEnd')),
+    paidLeave:   mk(g('PaidLeaveStart'),   g('PaidLeaveEnd')),
+    late:        mk(g('LateStart'),        g('LateEnd')),
+    early:       mk(g('EarlyStart'),       g('EarlyEnd')),
+    statusRange: mk(g('StatusTimeStart'),  g('StatusTimeEnd')),
+    statusMemo:  document.getElementById(prefix+'StatusMemo')?.value||'',
   };
 }
 function setExtraTimesUI(prefix, et){
   const s=(id,v)=>{const el=document.getElementById(prefix+id);if(el)el.value=v||'';};
-  const ot=parseTimeRange(et?.overtime);   s('OvertimeStart',ot.start);  s('OvertimeEnd',ot.end);
-  const pl=parseTimeRange(et?.paidLeave);  s('PaidLeaveStart',pl.start); s('PaidLeaveEnd',pl.end);
-  const lt=parseTimeRange(et?.late);       s('LateStart',lt.start);      s('LateEnd',lt.end);
-  const er=parseTimeRange(et?.early);      s('EarlyStart',er.start);     s('EarlyEnd',er.end);
-  ['OvertimeHint','PaidLeaveHint','LateHint','EarlyHint'].forEach(k=>{
-    const ids={OvertimeHint:['OvertimeStart','OvertimeEnd'],PaidLeaveHint:['PaidLeaveStart','PaidLeaveEnd'],LateHint:['LateStart','LateEnd'],EarlyHint:['EarlyStart','EarlyEnd']};
-    updateRptTimeHint(prefix+ids[k][0], prefix+ids[k][1], prefix+k);
-  });
+  const ot=parseTimeRange(et?.overtime);     s('OvertimeStart',ot.start);    s('OvertimeEnd',ot.end);
+  const pl=parseTimeRange(et?.paidLeave);    s('PaidLeaveStart',pl.start);   s('PaidLeaveEnd',pl.end);
+  const lt=parseTimeRange(et?.late);         s('LateStart',lt.start);        s('LateEnd',lt.end);
+  const er=parseTimeRange(et?.early);        s('EarlyStart',er.start);       s('EarlyEnd',er.end);
+  const sr=parseTimeRange(et?.statusRange);  s('StatusTimeStart',sr.start);  s('StatusTimeEnd',sr.end);
+  s('StatusMemo', et?.statusMemo||'');
+  [['OvertimeHint','OvertimeStart','OvertimeEnd'],['PaidLeaveHint','PaidLeaveStart','PaidLeaveEnd'],
+   ['LateHint','LateStart','LateEnd'],['EarlyHint','EarlyStart','EarlyEnd'],
+   ['StatusTimeHint','StatusTimeStart','StatusTimeEnd']
+  ].forEach(([h,a,b])=>updateRptTimeHint(prefix+a, prefix+b, prefix+h));
 }
 
 function resetReportForm(){
@@ -3040,12 +3071,6 @@ function addEditReportRow(){
   document.getElementById('editReportRows').appendChild(row);
 }
 
-function setEditReportStatus(status){
-  document.querySelectorAll('#rptEditModal .rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.estatus===status));
-  const isWork = status==='通常';
-  document.getElementById('editRptWorkSection').style.display  = isWork?'':'none';
-  document.getElementById('editRptExtraSection').style.display = isWork?'':'none';
-}
 
 function closeRptEditModal(e){
   if(e && e.target !== document.getElementById('rptEditModal')) return;
@@ -3081,7 +3106,9 @@ async function saveReportEdit(){
   const late       = timeRangeToHours(...(extraTimes.late.split('-')));
   const early      = timeRangeToHours(...(extraTimes.early.split('-')));
   const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
-  const memo       = document.getElementById('editRptMemo').value.trim();
+  const memo = status==='通常'
+    ? (document.getElementById('editRptMemo').value.trim())
+    : (extraTimes.statusMemo||'');
 
   const rep = reports.find(r=>r.id===editingReportId);
   if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes}); }
@@ -3130,9 +3157,10 @@ function editReport(id, e){
     calcRowHours(lastRow);
   });
 
-  // 残業・有給・遅刻・早退・メモ
-  setExtraTimesUI('editRpt', r.extraTimes||{});
-  document.getElementById('editRptMemo').value = r.memo||'';
+  // 残業・有給・遅刻・早退・ステータス時間帯・メモ
+  const et = {...(r.extraTimes||{}), statusMemo: (r.status!=='通常' ? r.memo : '') };
+  setExtraTimesUI('editRpt', et);
+  document.getElementById('editRptMemo').value = r.status==='通常' ? (r.memo||'') : '';
 
   // モーダルを開く
   document.getElementById('rptEditModal').style.display='flex';
@@ -3164,10 +3192,19 @@ function renderTimeline(){
 
   // 表示時間範囲を自動計算 (1時間=60px)
   let minH=8,maxH=18;
-  dayReports.forEach(r=>r.rows.forEach(rw=>{
-    if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
-    if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
-  }));
+  dayReports.forEach(r=>{
+    r.rows.forEach(rw=>{
+      if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
+      if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
+    });
+    // ステータス時間帯も考慮
+    const sr=r.extraTimes?.statusRange;
+    if(sr&&sr.includes('-')){
+      const[s,e]=sr.split('-');
+      if(s){const h=parseInt(s);if(h<minH)minH=h;}
+      if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
+    }
+  });
   const totalMins=(maxH-minH)*60;
   const pxPerMin=1; // 1分=1px → 1時間=60px
   const trackH=totalMins*pxPerMin;
@@ -3196,8 +3233,20 @@ function renderTimeline(){
 
     let blocks='';
     if(stStyle){
-      // 有給・欠勤・その他休日：トラック全体をカバーするブロック
-      blocks=`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
+      // 有給・欠勤・その他休日：時間帯があれば位置指定ブロック、なければ全体
+      const sr=r?.extraTimes?.statusRange;
+      if(sr&&sr.includes('-')){
+        const[ss,se]=sr.split('-');
+        const[sh,sm]=ss.split(':').map(Number);
+        const[eh,em]=se.split(':').map(Number);
+        const top=(sh*60+sm-minH*60)*pxPerMin;
+        const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
+        blocks=height>0
+          ?`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${stStyle.border};opacity:.85;" title="${stStyle.label}\n${ss}〜${se}">${stStyle.label}<br>${ss}〜${se}</div>`
+          :`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
+      } else {
+        blocks=`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
+      }
     } else if(r){
       // 通常：作業行ブロック
       blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
@@ -4166,6 +4215,13 @@ async function initApp(){
       <div id="editRptWorkSection" style="margin-top:12px;">
         <div id="editReportRows"></div>
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addEditReportRow()">＋ 現場を追加</button>
+      </div>
+      <!-- 有給・欠勤・その他休日の時間帯（編集モーダル） -->
+      <div id="editRptStatusTimeSection" style="display:none;margin-top:12px;">
+        <div class="report-extra" style="margin-top:0;padding-top:0;border-top:none;">
+          <div class="form-group"><label id="editRptStatusTimeLabel" style="min-width:4em;">時間帯</label><div class="rpt-time-range"><input type="time" id="editRptStatusTimeStart" oninput="updateRptTimeHint('editRptStatusTimeStart','editRptStatusTimeEnd','editRptStatusTimeHint')"><span>〜</span><input type="time" id="editRptStatusTimeEnd" oninput="updateRptTimeHint('editRptStatusTimeStart','editRptStatusTimeEnd','editRptStatusTimeHint')"><span class="rpt-time-hint" id="editRptStatusTimeHint"></span></div></div>
+          <div class="form-group"><label>メモ</label><input type="text" id="editRptStatusMemo" placeholder="連絡事項など" style="width:200px"></div>
+        </div>
       </div>
       <div class="report-extra" id="editRptExtraSection" style="margin-top:12px;">
         <div class="form-group"><label>残業</label><div class="rpt-time-range"><input type="time" id="editRptOvertimeStart" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span>〜</span><input type="time" id="editRptOvertimeEnd" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span class="rpt-time-hint" id="editRptOvertimeHint"></span></div></div>
