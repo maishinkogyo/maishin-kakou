@@ -808,6 +808,7 @@ select:focus,input:focus{border-color:var(--accent);}
             <option value="">全員</option>
           </select>
           <input type="month" id="rptFilterMonth" onchange="renderReportList()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="mergeDuplicateReports()" title="同じ日・同じ人の日報をまとめる">🔗 重複をまとめる</button>
         </div>
       </div>
       <div id="reportList"></div>
@@ -2931,8 +2932,44 @@ async function saveReport(){
       if(error) throw error;
       flashSaved();
     }catch(e){ console.error('日報更新失敗:',e); alert('更新失敗: '+e.message); return; }
+    saveLocal(); resetReportForm(); renderReportList();
+    alert('日報を更新しました！');
+    editingReportId = null;
+    const btn = document.querySelector('.report-save-btn');
+    if(btn){ btn.textContent='💾 日報を保存'; btn.style.background=''; }
+    const cancelBtn = document.getElementById('rptCancelEdit');
+    if(cancelBtn) cancelBtn.style.display='none';
+    return;
+  }
+
+  // 新規モード：同日・同人の日報があれば行をまとめる
+  const existing = reports.find(r=>r.date===date && r.worker===worker);
+  if(existing){
+    // 行を追記
+    existing.rows = [...(existing.rows||[]), ...rows];
+    // extraTimes：新しく入力されたものを優先、なければ既存を維持
+    const mergedET = {...(existing.extraTimes||{})};
+    ['overtime','paidLeave','late','early'].forEach(k=>{ if(extraTimes[k]) mergedET[k]=extraTimes[k]; });
+    existing.extraTimes = mergedET;
+    existing.overtime  = timeRangeToHours(...(mergedET.overtime?.split('-')||['','']));
+    existing.late      = timeRangeToHours(...(mergedET.late?.split('-')||['','']));
+    existing.early     = timeRangeToHours(...(mergedET.early?.split('-')||['','']));
+    existing.paidLeave = timeRangeToHours(...(mergedET.paidLeave?.split('-')||['','']));
+    // メモ：両方あれば改行で連結
+    if(memo) existing.memo = existing.memo ? existing.memo+'\n'+memo : memo;
+    try{
+      const {error} = await sb.from('daily_reports').upsert({
+        id:existing.id, date, worker, rows:existing.rows,
+        overtime:existing.overtime, late:existing.late, early:existing.early,
+        memo:existing.memo, status:existing.status||'通常', extra_times:existing.extraTimes
+      });
+      if(error) throw error;
+      flashSaved();
+    }catch(e){ console.error('日報結合失敗:',e); alert('保存失敗: '+e.message); return; }
+    saveLocal(); resetReportForm(); renderReportList();
+    alert('同じ日の日報にまとめました！');
   } else {
-    // 新規モード
+    // 完全新規
     const rep = {id:nextReportId++, date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes};
     reports.push(rep);
     try{
@@ -2943,12 +2980,9 @@ async function saveReport(){
       if(error) throw error;
       flashSaved();
     }catch(e){ console.error('日報保存失敗:',e); alert('保存失敗: '+e.message); return; }
+    saveLocal(); resetReportForm(); renderReportList();
+    alert('日報を保存しました！');
   }
-
-  saveLocal();
-  resetReportForm();
-  renderReportList();
-  alert(editingReportId !== null ? '日報を更新しました！' : '日報を保存しました！');
   editingReportId = null;
   // ボタンを「保存」に戻す
   const btn = document.querySelector('.report-save-btn');
@@ -3393,6 +3427,53 @@ function renderReportList(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function mergeDuplicateReports(){
+  // 同日・同人のグループを検出
+  const groups = {};
+  reports.forEach(r=>{
+    const key = r.date+'__'+r.worker;
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(r);
+  });
+  const dupeGroups = Object.values(groups).filter(g=>g.length>1);
+  if(!dupeGroups.length){ alert('まとめる日報はありません'); return; }
+
+  const total = dupeGroups.reduce((s,g)=>s+g.length,0);
+  if(!confirm(`${dupeGroups.length}グループ（計${total}件）の日報をまとめます。よろしいですか？`)) return;
+
+  for(const group of dupeGroups){
+    // 日付降順でソート（最古を基準に）
+    group.sort((a,b)=>a.id-b.id);
+    const base = group[0];
+    const rest = group.slice(1);
+    // 行を全部結合
+    base.rows = group.flatMap(r=>r.rows||[]);
+    // extraTimes：後のものを優先
+    const mergedET = {...(base.extraTimes||{})};
+    rest.forEach(r=>{ Object.entries(r.extraTimes||{}).forEach(([k,v])=>{ if(v) mergedET[k]=v; }); });
+    base.extraTimes = mergedET;
+    // memo連結
+    const memos = group.map(r=>r.memo||'').filter(Boolean);
+    base.memo = [...new Set(memos)].join('\n');
+    // 基準をDB更新
+    try{
+      await sb.from('daily_reports').upsert({
+        id:base.id, date:base.date, worker:base.worker, rows:base.rows,
+        memo:base.memo, status:base.status||'通常', extra_times:base.extraTimes
+      });
+    }catch(e){ console.error('結合更新失敗:',e); }
+    // 重複をDB・ローカルから削除
+    for(const r of rest){
+      try{ await sb.from('daily_reports').delete().eq('id',r.id); }catch(e){ console.error('重複削除失敗:',e); }
+      reports = reports.filter(x=>x.id!==r.id);
+    }
+  }
+  flashSaved();
+  saveLocal();
+  renderReportList();
+  alert('まとめ完了しました！');
 }
 
 async function deleteReport(id, e){
