@@ -3204,6 +3204,13 @@ function renderTimeline(){
       if(s){const h=parseInt(s);if(h<minH)minH=h;}
       if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
     }
+    // 有給時間帯も考慮
+    const plr=r.extraTimes?.paidLeave;
+    if(plr&&plr.includes('-')){
+      const[s,e]=plr.split('-');
+      if(s){const h=parseInt(s);if(h<minH)minH=h;}
+      if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
+    }
   });
   const totalMins=(maxH-minH)*60;
   const pxPerMin=1; // 1分=1px → 1時間=60px
@@ -3249,7 +3256,7 @@ function renderTimeline(){
       }
     } else if(r){
       // 通常：作業行ブロック
-      blocks=r.rows.filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
+      blocks=(r.rows||[]).filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
         const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
         const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
         const[sh,sm]=rw.startTime.split(':').map(Number);
@@ -3262,6 +3269,19 @@ function renderTimeline(){
         const dispText=wt?`${site}　${wt}<br>${rw.startTime}〜${rw.endTime}`:`${site}<br>${rw.startTime}〜${rw.endTime}`;
         return`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${color}" title="${label}">${dispText}</div>`;
       }).join('');
+      // 有給時間帯ブロック（通常勤務でも部分有給がある場合）
+      const plRange=r.extraTimes?.paidLeave;
+      if(plRange&&plRange.includes('-')){
+        const[ps,pe]=plRange.split('-');
+        const[psh,psm]=ps.split(':').map(Number);
+        const[peh,pem]=pe.split(':').map(Number);
+        const ptop=(psh*60+psm-minH*60)*pxPerMin;
+        const pheight=((peh*60+pem)-(psh*60+psm))*pxPerMin;
+        if(pheight>0){
+          const plStyle=STATUS_TL['有給'];
+          blocks+=`<div class="timeline-block" style="top:${ptop}px;height:${pheight}px;background:${plStyle.border};opacity:.85;" title="🌴 有給\n${ps}〜${pe}">🌴 有給<br>${ps}〜${pe}</div>`;
+        }
+      }
     }
 
     const nameBadge=stStyle?`<span style="font-size:9px;padding:1px 5px;border-radius:99px;background:${stStyle.border};color:#fff;margin-left:4px;">${status}</span>`:'';
