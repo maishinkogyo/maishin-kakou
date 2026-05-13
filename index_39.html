@@ -3838,7 +3838,7 @@ function buildSiteTable(list, days, filterWorker=''){
     }).join('');
     const manDays = (rowTotal/7).toFixed(1);
 
-    // 内訳行（作業者別）
+    // 内訳行（作業者別）— 同じtbodyに直接追加してcolspan不要に
     const workerMap = siteWorkerMap[site]||{};
     const workerNames = Object.keys(workerMap).sort();
     const detailRows = workerNames.map(wk=>{
@@ -3846,13 +3846,13 @@ function buildSiteTable(list, days, filterWorker=''){
       if(!wTotal) return '';
       const wCells = days.map(d=>{
         const v = workerMap[wk][d]||0;
-        return`<td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;padding:3px 2px;color:${v>0?'var(--text)':'var(--text-muted)'};">${v>0?v:''}</td>`;
+        return`<td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;padding:3px 2px;border-top:1px dashed var(--border);color:${v>0?'var(--text)':''};">${v>0?v:''}</td>`;
       }).join('');
-      return`<tr style="background:var(--surface2);">
-        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);">👤 ${wk}</td>
+      return`<tr class="${detailId}" style="display:none;background:var(--surface2);">
+        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);border-top:1px dashed var(--border);">👤 ${wk}</td>
         ${wCells}
-        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:2px solid var(--border);">${wTotal}</td>
-        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:1px solid var(--border);">${(wTotal/7).toFixed(1)}</td>
+        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:2px solid var(--border);border-top:1px dashed var(--border);">${wTotal}</td>
+        <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:1px solid var(--border);border-top:1px dashed var(--border);">${(wTotal/7).toFixed(1)}</td>
       </tr>`;
     }).join('');
 
@@ -3864,13 +3864,7 @@ function buildSiteTable(list, days, filterWorker=''){
       <td style="text-align:center;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--ok);padding:4px 6px;border-left:2px solid var(--border);">${rowTotal}</td>
       <td style="text-align:center;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--text-muted);padding:4px 6px;border-left:1px solid var(--border);">${manDays}</td>
     </tr>
-    <tr id="${detailId}" style="display:none;">
-      <td colspan="${colCount}" style="padding:0;">
-        <table style="width:100%;border-collapse:collapse;border-top:1px dashed var(--border);">
-          <tbody>${detailRows}</tbody>
-        </table>
-      </td>
-    </tr>`;
+    ${detailRows}`;
   }).join('');
 
   // 合計行
