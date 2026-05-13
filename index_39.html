@@ -838,6 +838,11 @@ select:focus,input:focus{border-color:var(--accent);}
     <div id="rpanel-timeline" style="display:none">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
         <div class="form-group" style="margin:0"><label>日付</label><input type="date" id="tlDate" onchange="renderTimeline()"></div>
+        <div class="form-group" style="margin:0"><label>作業員</label>
+          <select id="tlWorker" onchange="renderTimeline()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+            <option value="">全員</option>
+          </select>
+        </div>
       </div>
       <div id="timelineView"></div>
     </div>
@@ -3176,6 +3181,7 @@ function switchReportTab(tab){
     if(!document.getElementById('tlDate').value){
       document.getElementById('tlDate').value = document.getElementById('rptDate').value || new Date().toISOString().slice(0,10);
     }
+    refreshTlWorkerSelect();
     renderTimeline();
   }
 }
@@ -3185,8 +3191,17 @@ const TL_COLORS=['#16a34a','#2563eb','#9333ea','#d97706','#dc2626','#0891b2','#7
 const siteColorMap={};let siteColorIdx=0;
 function getSiteColor(site){if(!siteColorMap[site])siteColorMap[site]=TL_COLORS[siteColorIdx++%TL_COLORS.length];return siteColorMap[site];}
 
+function refreshTlWorkerSelect(){
+  const sel=document.getElementById('tlWorker');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">全員</option>'+activeWorkers().map(w=>`<option value="${w}">${w}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
 function renderTimeline(){
   const date=document.getElementById('tlDate').value;
+  const wf=document.getElementById('tlWorker')?.value||'';
   const el=document.getElementById('timelineView');
   const dayReports=date?reports.filter(r=>r.date===date):[];
 
@@ -3233,7 +3248,8 @@ function renderTimeline(){
   };
 
   // 登録済み全作業員を列として表示（日報がない人も枠あり）
-  const workerCols=activeWorkers().map(wName=>{
+  const displayWorkers=wf?activeWorkers().filter(w=>w===wf):activeWorkers();
+  const workerCols=displayWorkers.map(wName=>{
     const r=dayReports.find(rp=>rp.worker===wName);
     const status=r?.status||'通常';
     const stStyle=STATUS_TL[status];
