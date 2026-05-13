@@ -3898,11 +3898,11 @@ function buildSiteTable(list, days, filterWorker=''){
 }
 
 function toggleSiteDetail(id, row){
-  const detail = document.getElementById(id);
-  if(!detail) return;
+  const rows = document.querySelectorAll(`tr.${id}`);
+  if(!rows.length) return;
   const arrow = row.querySelector('.site-detail-arrow');
-  const isOpen = detail.style.display !== 'none';
-  detail.style.display = isOpen ? 'none' : '';
+  const isOpen = rows[0].style.display !== 'none';
+  rows.forEach(r => r.style.display = isOpen ? 'none' : '');
   if(arrow) arrow.textContent = isOpen ? '▶' : '▼';
 }
 
