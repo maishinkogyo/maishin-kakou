@@ -191,11 +191,13 @@ select:focus,input:focus{border-color:var(--accent);}
 .work-types{display:flex;gap:6px;flex-wrap:wrap;}
 .work-type-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;color:var(--text-muted);transition:all .15s;user-select:none;}
 .work-type-chip.active{border-color:var(--accent);background:rgba(37,99,235,.1);color:var(--accent);font-weight:600;}
-.report-extra{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);align-items:flex-end;}
+.report-extra{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);align-items:flex-end;}
 .report-extra .form-group{margin:0;display:flex;align-items:center;gap:6px;}
-.report-extra .form-group label{white-space:nowrap;font-size:12px;}
-.report-extra input[type="number"]{width:70px;}
+.report-extra .form-group label{white-space:nowrap;font-size:12px;min-width:3em;}
 .rpt-unit{font-size:12px;color:var(--text-muted);}
+.rpt-time-range{display:flex;align-items:center;gap:4px;}
+.rpt-time-range input[type="time"]{width:88px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;}
+.rpt-time-hint{font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:32px;}
 .report-list-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
 .report-card{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;}
 .report-card-header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);cursor:pointer;}
@@ -793,11 +795,12 @@ select:focus,input:focus{border-color:var(--accent);}
       <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addReportRow()">＋ 現場を追加</button>
       </div>
 
-      <!-- 残業・遅刻・早退 -->
+      <!-- 残業・有給・遅刻・早退 -->
       <div class="report-extra" id="rptExtraSection">
-        <div class="form-group"><label>残業時間</label><input type="number" id="rptOvertime" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
-        <div class="form-group"><label>遅刻</label><input type="number" id="rptLate" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
-        <div class="form-group"><label>早退</label><input type="number" id="rptEarly" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
+        <div class="form-group"><label>残業</label><div class="rpt-time-range"><input type="time" id="rptOvertimeStart" oninput="updateRptTimeHint('rptOvertimeStart','rptOvertimeEnd','rptOvertimeHint')"><span>〜</span><input type="time" id="rptOvertimeEnd" oninput="updateRptTimeHint('rptOvertimeStart','rptOvertimeEnd','rptOvertimeHint')"><span class="rpt-time-hint" id="rptOvertimeHint"></span></div></div>
+        <div class="form-group"><label>有給</label><div class="rpt-time-range"><input type="time" id="rptPaidLeaveStart" oninput="updateRptTimeHint('rptPaidLeaveStart','rptPaidLeaveEnd','rptPaidLeaveHint')"><span>〜</span><input type="time" id="rptPaidLeaveEnd" oninput="updateRptTimeHint('rptPaidLeaveStart','rptPaidLeaveEnd','rptPaidLeaveHint')"><span class="rpt-time-hint" id="rptPaidLeaveHint"></span></div></div>
+        <div class="form-group"><label>遅刻</label><div class="rpt-time-range"><input type="time" id="rptLateStart" oninput="updateRptTimeHint('rptLateStart','rptLateEnd','rptLateHint')"><span>〜</span><input type="time" id="rptLateEnd" oninput="updateRptTimeHint('rptLateStart','rptLateEnd','rptLateHint')"><span class="rpt-time-hint" id="rptLateHint"></span></div></div>
+        <div class="form-group"><label>早退</label><div class="rpt-time-range"><input type="time" id="rptEarlyStart" oninput="updateRptTimeHint('rptEarlyStart','rptEarlyEnd','rptEarlyHint')"><span>〜</span><input type="time" id="rptEarlyEnd" oninput="updateRptTimeHint('rptEarlyStart','rptEarlyEnd','rptEarlyHint')"><span class="rpt-time-hint" id="rptEarlyHint"></span></div></div>
         <div class="form-group"><label>メモ</label><input type="text" id="rptMemo" placeholder="連絡事項など" style="width:200px"></div>
       </div>
 
@@ -2602,7 +2605,7 @@ async function loadData(){
       console.warn('vehicles DB失敗、キャッシュ使用:', e5.message);
     }
     if(dbRpts && !e6) {
-      reports = dbRpts.map(r=>({id:r.id, date:r.date, worker:r.worker, rows:r.rows||[], overtime:r.overtime||0, late:r.late||0, early:r.early||0, memo:r.memo||'', status:r.status||'通常'}));
+      reports = dbRpts.map(r=>({id:r.id, date:r.date, worker:r.worker, rows:r.rows||[], overtime:r.overtime||0, late:r.late||0, early:r.early||0, memo:r.memo||'', status:r.status||'通常', extraTimes:r.extra_times||{}}));
       nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1;
     } else if(e6 && _cache.reports) {
       reports = _cache.reports; nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1;
@@ -2913,30 +2916,32 @@ async function saveReport(){
   const status = currentReportStatus;
   if(status==='通常' && !rows.length){alert('現場・作業時間を入力してください');return;}
 
-  const overtime = Number(document.getElementById('rptOvertime').value)||0;
-  const late     = Number(document.getElementById('rptLate').value)||0;
-  const early    = Number(document.getElementById('rptEarly').value)||0;
-  const memo     = document.getElementById('rptMemo').value.trim();
+  const extraTimes = getExtraTimes('rpt');
+  const overtime   = timeRangeToHours(...(extraTimes.overtime.split('-')));
+  const late       = timeRangeToHours(...(extraTimes.late.split('-')));
+  const early      = timeRangeToHours(...(extraTimes.early.split('-')));
+  const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
+  const memo       = document.getElementById('rptMemo').value.trim();
 
   if(editingReportId !== null){
     // 更新モード
     const rep = reports.find(r=>r.id===editingReportId);
-    if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, memo, status}); }
+    if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes}); }
     try{
       const {error} = await sb.from('daily_reports').upsert({
-        id:editingReportId, date, worker, rows, overtime, late, early, memo, status
+        id:editingReportId, date, worker, rows, overtime, late, early, memo, status, extra_times:extraTimes
       });
       if(error) throw error;
       flashSaved();
     }catch(e){ console.error('日報更新失敗:',e); alert('更新失敗: '+e.message); return; }
   } else {
     // 新規モード
-    const rep = {id:nextReportId++, date, worker, rows, overtime, late, early, memo, status};
+    const rep = {id:nextReportId++, date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes};
     reports.push(rep);
     try{
       const {error} = await sb.from('daily_reports').insert({
         id:rep.id, date:rep.date, worker:rep.worker,
-        rows:rep.rows, overtime:rep.overtime, late:rep.late, early:rep.early, memo:rep.memo, status:rep.status
+        rows:rep.rows, overtime:rep.overtime, late:rep.late, early:rep.early, memo:rep.memo, status:rep.status, extra_times:rep.extraTimes
       });
       if(error) throw error;
       flashSaved();
@@ -2955,10 +2960,50 @@ async function saveReport(){
   if(cancelBtn) cancelBtn.style.display='none';
 }
 
+// ── 時間帯ヘルパー ──
+function timeRangeToHours(start, end){
+  if(!start||!end) return 0;
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const diff=(eh*60+em)-(sh*60+sm);
+  return diff>0 ? Math.round(diff/60*10)/10 : 0;
+}
+function parseTimeRange(str){
+  if(!str||typeof str!=='string') return {start:'',end:''};
+  const [start,end]=(str.includes('-')?str.split('-'):['','']);
+  return {start:start||'',end:end||''};
+}
+function updateRptTimeHint(startId,endId,hintId){
+  const h=timeRangeToHours(document.getElementById(startId)?.value,document.getElementById(endId)?.value);
+  const el=document.getElementById(hintId);
+  if(el) el.textContent=h>0?`(${h}h)`:'';
+}
+function getExtraTimes(prefix){
+  const g=(id)=>document.getElementById(prefix+id)?.value||'';
+  const mk=(s,e)=>(s&&e)?`${s}-${e}`:'';
+  return {
+    overtime:  mk(g('OvertimeStart'),  g('OvertimeEnd')),
+    paidLeave: mk(g('PaidLeaveStart'), g('PaidLeaveEnd')),
+    late:      mk(g('LateStart'),      g('LateEnd')),
+    early:     mk(g('EarlyStart'),     g('EarlyEnd')),
+  };
+}
+function setExtraTimesUI(prefix, et){
+  const s=(id,v)=>{const el=document.getElementById(prefix+id);if(el)el.value=v||'';};
+  const ot=parseTimeRange(et?.overtime);   s('OvertimeStart',ot.start);  s('OvertimeEnd',ot.end);
+  const pl=parseTimeRange(et?.paidLeave);  s('PaidLeaveStart',pl.start); s('PaidLeaveEnd',pl.end);
+  const lt=parseTimeRange(et?.late);       s('LateStart',lt.start);      s('LateEnd',lt.end);
+  const er=parseTimeRange(et?.early);      s('EarlyStart',er.start);     s('EarlyEnd',er.end);
+  ['OvertimeHint','PaidLeaveHint','LateHint','EarlyHint'].forEach(k=>{
+    const ids={OvertimeHint:['OvertimeStart','OvertimeEnd'],PaidLeaveHint:['PaidLeaveStart','PaidLeaveEnd'],LateHint:['LateStart','LateEnd'],EarlyHint:['EarlyStart','EarlyEnd']};
+    updateRptTimeHint(prefix+ids[k][0], prefix+ids[k][1], prefix+k);
+  });
+}
+
 function resetReportForm(){
   document.getElementById('reportRows').innerHTML='';
   reportRowCount=0;
-  ['rptOvertime','rptLate','rptEarly'].forEach(id=>document.getElementById(id).value='');
+  setExtraTimesUI('rpt',{});
   document.getElementById('rptMemo').value='';
   setReportStatus('通常');
   addReportRow();
@@ -3031,16 +3076,18 @@ async function saveReportEdit(){
 
   if(status==='通常' && !rows.length){alert('現場・作業時間を入力してください');return;}
 
-  const overtime = Number(document.getElementById('editRptOvertime').value)||0;
-  const late     = Number(document.getElementById('editRptLate').value)||0;
-  const early    = Number(document.getElementById('editRptEarly').value)||0;
-  const memo     = document.getElementById('editRptMemo').value.trim();
+  const extraTimes = getExtraTimes('editRpt');
+  const overtime   = timeRangeToHours(...(extraTimes.overtime.split('-')));
+  const late       = timeRangeToHours(...(extraTimes.late.split('-')));
+  const early      = timeRangeToHours(...(extraTimes.early.split('-')));
+  const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
+  const memo       = document.getElementById('editRptMemo').value.trim();
 
   const rep = reports.find(r=>r.id===editingReportId);
-  if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, memo, status}); }
+  if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes}); }
   try{
     const {error} = await sb.from('daily_reports').upsert({
-      id:editingReportId, date, worker, rows, overtime, late, early, memo, status
+      id:editingReportId, date, worker, rows, overtime, late, early, memo, status, extra_times:extraTimes
     });
     if(error) throw error;
     flashSaved();
@@ -3083,11 +3130,9 @@ function editReport(id, e){
     calcRowHours(lastRow);
   });
 
-  // 残業・遅刻・早退・メモ
-  document.getElementById('editRptOvertime').value = r.overtime||'';
-  document.getElementById('editRptLate').value     = r.late||'';
-  document.getElementById('editRptEarly').value    = r.early||'';
-  document.getElementById('editRptMemo').value     = r.memo||'';
+  // 残業・有給・遅刻・早退・メモ
+  setExtraTimesUI('editRpt', r.extraTimes||{});
+  document.getElementById('editRptMemo').value = r.memo||'';
 
   // モーダルを開く
   document.getElementById('rptEditModal').style.display='flex';
@@ -3202,10 +3247,16 @@ function renderReportList(){
         <div class="report-work-chips">${(rw.workTypes||[]).map(w=>`<span class="report-work-chip">${w}</span>`).join('')}</div>
         <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap">${rw.hours}時間</span>
       </div>`).join('');
-    const extras = [];
-    if(r.overtime) extras.push(`残業 ${r.overtime}h`);
-    if(r.late)     extras.push(`遅刻 ${r.late}h`);
-    if(r.early)    extras.push(`早退 ${r.early}h`);
+    const fmtRange=(key,label)=>{
+      const rng=r.extraTimes?.[key];
+      if(rng) return `${label} ${rng.replace('-','〜')}`;
+      const h=r[key==='overtime'?'overtime':key==='late'?'late':'early'];
+      return h?`${label} ${h}h`:'';
+    };
+    const extras=[
+      fmtRange('overtime','残業'),fmtRange('paidLeave','有給'),
+      fmtRange('late','遅刻'),fmtRange('early','早退')
+    ].filter(Boolean);
     const extraStr = extras.length ? `<span style="font-size:11px;color:var(--warn)">${extras.join('　')}</span>` : '';
     const stBadge = st ? `<span style="font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;${STATUS_STYLE[st]||''}">${st}</span>` : '';
     return`<div class="report-card">
@@ -4098,9 +4149,10 @@ async function initApp(){
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addEditReportRow()">＋ 現場を追加</button>
       </div>
       <div class="report-extra" id="editRptExtraSection" style="margin-top:12px;">
-        <div class="form-group"><label>残業時間</label><input type="number" id="editRptOvertime" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
-        <div class="form-group"><label>遅刻</label><input type="number" id="editRptLate" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
-        <div class="form-group"><label>早退</label><input type="number" id="editRptEarly" placeholder="0" min="0" step="0.5"><span class="rpt-unit">時間</span></div>
+        <div class="form-group"><label>残業</label><div class="rpt-time-range"><input type="time" id="editRptOvertimeStart" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span>〜</span><input type="time" id="editRptOvertimeEnd" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span class="rpt-time-hint" id="editRptOvertimeHint"></span></div></div>
+        <div class="form-group"><label>有給</label><div class="rpt-time-range"><input type="time" id="editRptPaidLeaveStart" oninput="updateRptTimeHint('editRptPaidLeaveStart','editRptPaidLeaveEnd','editRptPaidLeaveHint')"><span>〜</span><input type="time" id="editRptPaidLeaveEnd" oninput="updateRptTimeHint('editRptPaidLeaveStart','editRptPaidLeaveEnd','editRptPaidLeaveHint')"><span class="rpt-time-hint" id="editRptPaidLeaveHint"></span></div></div>
+        <div class="form-group"><label>遅刻</label><div class="rpt-time-range"><input type="time" id="editRptLateStart" oninput="updateRptTimeHint('editRptLateStart','editRptLateEnd','editRptLateHint')"><span>〜</span><input type="time" id="editRptLateEnd" oninput="updateRptTimeHint('editRptLateStart','editRptLateEnd','editRptLateHint')"><span class="rpt-time-hint" id="editRptLateHint"></span></div></div>
+        <div class="form-group"><label>早退</label><div class="rpt-time-range"><input type="time" id="editRptEarlyStart" oninput="updateRptTimeHint('editRptEarlyStart','editRptEarlyEnd','editRptEarlyHint')"><span>〜</span><input type="time" id="editRptEarlyEnd" oninput="updateRptTimeHint('editRptEarlyStart','editRptEarlyEnd','editRptEarlyHint')"><span class="rpt-time-hint" id="editRptEarlyHint"></span></div></div>
         <div class="form-group"><label>メモ</label><input type="text" id="editRptMemo" placeholder="連絡事項など" style="width:200px"></div>
       </div>
     </div>
