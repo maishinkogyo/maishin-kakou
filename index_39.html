@@ -3307,9 +3307,9 @@ function renderReportList(){
   };
   el.innerHTML = list.map(r=>{
     const st = r.status && r.status!=='通常' ? r.status : null;
-    const totalH = r.rows.reduce((s,rw)=>s+rw.hours,0);
-    const siteNames = [...new Set(r.rows.map(rw=>rw.taskName||'').filter(Boolean))].join('・');
-    const detailRows = r.rows.map(rw=>`
+    const totalH = (r.rows||[]).reduce((s,rw)=>s+(rw.hours||0),0);
+    const siteNames = [...new Set((r.rows||[]).map(rw=>rw.taskName||'').filter(Boolean))].join('・');
+    const detailRows = (r.rows||[]).map(rw=>`
       <div class="report-detail-row">
         <span class="report-site-name">${rw.taskName||'現場未選択'}</span>
         <div class="report-work-chips">${(rw.workTypes||[]).map(w=>`<span class="report-work-chip">${w}</span>`).join('')}</div>
