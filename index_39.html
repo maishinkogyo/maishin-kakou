@@ -3199,107 +3199,154 @@ function refreshTlWorkerSelect(){
   if(cur) sel.value=cur;
 }
 
+// ── タイムライン共通ヘルパー ──
+const STATUS_TL={
+  '有給':      {bg:'rgba(16,185,129,.15)',border:'#10b981',text:'#065f46',label:'🌴 有給'},
+  '欠勤':      {bg:'rgba(239,68,68,.13)', border:'#ef4444',text:'#991b1b',label:'😷 欠勤'},
+  'その他休日':{bg:'rgba(99,102,241,.13)',border:'#6366f1',text:'#3730a3',label:'🎌 休日'},
+};
+
+function calcTlRange(rList){
+  let minH=8,maxH=18;
+  rList.forEach(r=>{
+    if(!r) return;
+    (r.rows||[]).forEach(rw=>{
+      if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
+      if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
+    });
+    [r.extraTimes?.statusRange, r.extraTimes?.paidLeave].forEach(rng=>{
+      if(rng&&rng.includes('-')){
+        const[s,e]=rng.split('-');
+        if(s){const h=parseInt(s);if(h<minH)minH=h;}
+        if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
+      }
+    });
+  });
+  return{minH,maxH};
+}
+
+function buildTlBlocks(r, minH, pxPerMin){
+  if(!r) return{blocks:'',stStyle:null,status:'通常'};
+  const status=r.status||'通常';
+  const stStyle=STATUS_TL[status];
+  let blocks='';
+  if(stStyle){
+    const sr=r.extraTimes?.statusRange;
+    if(sr&&sr.includes('-')){
+      const[ss,se]=sr.split('-');
+      const[sh,sm]=ss.split(':').map(Number);
+      const[eh,em]=se.split(':').map(Number);
+      const top=(sh*60+sm-minH*60)*pxPerMin;
+      const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
+      blocks=height>0
+        ?`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${stStyle.border};opacity:.85;" title="${stStyle.label}\n${ss}〜${se}">${stStyle.label}<br>${ss}〜${se}</div>`
+        :`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
+    } else {
+      blocks=`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
+    }
+  } else {
+    blocks=(r.rows||[]).filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
+      const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
+      const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
+      const[sh,sm]=rw.startTime.split(':').map(Number);
+      const[eh,em]=rw.endTime.split(':').map(Number);
+      const top=(sh*60+sm-minH*60)*pxPerMin;
+      const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
+      const color=getSiteColor(site);
+      const wt=(rw.workTypes||[]).join('・');
+      const label=wt?`${site}\n${wt}\n${rw.startTime}〜${rw.endTime}`:`${site}\n${rw.startTime}〜${rw.endTime}`;
+      const dispText=wt?`${site}　${wt}<br>${rw.startTime}〜${rw.endTime}`:`${site}<br>${rw.startTime}〜${rw.endTime}`;
+      return`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${color}" title="${label}">${dispText}</div>`;
+    }).join('');
+    const plRange=r.extraTimes?.paidLeave;
+    if(plRange&&plRange.includes('-')){
+      const[ps,pe]=plRange.split('-');
+      const[psh,psm]=ps.split(':').map(Number);
+      const[peh,pem]=pe.split(':').map(Number);
+      const ptop=(psh*60+psm-minH*60)*pxPerMin;
+      const pheight=((peh*60+pem)-(psh*60+psm))*pxPerMin;
+      if(pheight>0){
+        blocks+=`<div class="timeline-block" style="top:${ptop}px;height:${pheight}px;background:${STATUS_TL['有給'].border};opacity:.85;" title="🌴 有給\n${ps}〜${pe}">🌴 有給<br>${ps}〜${pe}</div>`;
+      }
+    }
+  }
+  return{blocks,stStyle,status};
+}
+
 function renderTimeline(){
   const date=document.getElementById('tlDate').value;
   const wf=document.getElementById('tlWorker')?.value||'';
   const el=document.getElementById('timelineView');
-  const dayReports=date?reports.filter(r=>r.date===date):[];
+  if(!el) return;
+  const pxPerMin=1;
 
-  // 表示時間範囲を自動計算 (1時間=60px)
-  let minH=8,maxH=18;
-  dayReports.forEach(r=>{
-    r.rows.forEach(rw=>{
-      if(rw.startTime){const h=parseInt(rw.startTime);if(h<minH)minH=h;}
-      if(rw.endTime){const h=parseInt(rw.endTime)+1;if(h>maxH)maxH=h;}
+  // ── 個人別・週間表示 ──
+  if(wf && date){
+    // 選択日を含む月曜〜日曜を算出
+    const base=new Date(date+'T00:00:00');
+    const dow=base.getDay();
+    const mon=new Date(base); mon.setDate(base.getDate()-(dow===0?6:dow-1));
+    const weekDates=Array.from({length:7},(_,i)=>{
+      const d=new Date(mon); d.setDate(mon.getDate()+i);
+      return d.toISOString().slice(0,10);
     });
-    // ステータス時間帯も考慮
-    const sr=r.extraTimes?.statusRange;
-    if(sr&&sr.includes('-')){
-      const[s,e]=sr.split('-');
-      if(s){const h=parseInt(s);if(h<minH)minH=h;}
-      if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
-    }
-    // 有給時間帯も考慮
-    const plr=r.extraTimes?.paidLeave;
-    if(plr&&plr.includes('-')){
-      const[s,e]=plr.split('-');
-      if(s){const h=parseInt(s);if(h<minH)minH=h;}
-      if(e){const h=parseInt(e)+1;if(h>maxH)maxH=h;}
-    }
-  });
-  const totalMins=(maxH-minH)*60;
-  const pxPerMin=1; // 1分=1px → 1時間=60px
-  const trackH=totalMins*pxPerMin;
+    const WEEK_LABELS=['月','火','水','木','金','土','日'];
+    const weekReports=weekDates.map(d=>reports.find(r=>r.date===d&&r.worker===wf)||null);
+    const today=new Date().toISOString().slice(0,10);
 
-  // 左側：時間軸
+    const{minH,maxH}=calcTlRange(weekReports);
+    const trackH=(maxH-minH)*60*pxPerMin;
+
+    const hourMarks=[];
+    for(let h=minH;h<=maxH;h++) hourMarks.push(`<div class="timeline-hour-mark">${h}:00</div>`);
+    const timeAxis=`<div class="timeline-time-axis"><div class="timeline-time-header" style="font-size:11px;color:var(--text-muted);">👤 ${wf}</div>${hourMarks.join('')}</div>`;
+
+    const gridLines=[];
+    for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="timeline-track-hour" style="top:${(h-minH)*60}px"></div>`);
+
+    const dayCols=weekDates.map((d,i)=>{
+      const r=weekReports[i];
+      const{blocks,stStyle,status}=buildTlBlocks(r,minH,pxPerMin);
+      const isSat=i===5, isSun=i===6;
+      const isSelected=d===date, isToday=d===today;
+      const[,mm,dd]=d.split('-');
+      const headColor=isSun?'#ef4444':isSat?'#2563eb':'var(--text)';
+      const headStyle=isSelected?`font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);`
+                     :isToday?`font-weight:600;color:${headColor};`:`color:${headColor};`;
+      const trackBg=isSun?'rgba(239,68,68,.03)':isSat?'rgba(37,99,235,.03)':'';
+      const stBadge=stStyle?`<span style="font-size:9px;padding:1px 4px;border-radius:99px;background:${stStyle.border};color:#fff;margin-left:3px;">${status}</span>`:'';
+      return`<div class="timeline-worker-col">
+        <div class="timeline-worker-name" style="${headStyle}font-size:12px;padding-bottom:4px;">
+          ${mm}/${dd}<span style="font-size:10px;margin-left:3px;opacity:.8;">(${WEEK_LABELS[i]})</span>${stBadge}
+        </div>
+        <div class="timeline-track" style="height:${trackH}px;${trackBg?`background:${trackBg};`:''}">
+          ${stStyle?'':gridLines.join('')}${blocks}
+        </div>
+      </div>`;
+    }).join('');
+
+    const legend=Object.entries(siteColorMap).map(([site,color])=>
+      `<div class="timeline-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:${color};display:inline-block;flex-shrink:0"></span>${site}</div>`
+    ).join('');
+    el.innerHTML=`<div class="timeline-wrap">${timeAxis}${dayCols}</div><div class="timeline-legend">${legend}</div>`;
+    return;
+  }
+
+  // ── 全員・日次表示 ──
+  const dayReports=date?reports.filter(r=>r.date===date):[];
+  const{minH,maxH}=calcTlRange(dayReports);
+  const trackH=(maxH-minH)*60*pxPerMin;
+
   const hourMarks=[];
   for(let h=minH;h<=maxH;h++) hourMarks.push(`<div class="timeline-hour-mark">${h}:00</div>`);
   const timeAxis=`<div class="timeline-time-axis"><div class="timeline-time-header"></div>${hourMarks.join('')}</div>`;
 
-  // 時間グリッド線
   const gridLines=[];
   for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="timeline-track-hour" style="top:${(h-minH)*60}px"></div>`);
 
-  // ステータス別スタイル
-  const STATUS_TL={
-    '有給':      {bg:'rgba(16,185,129,.15)',border:'#10b981',text:'#065f46',label:'🌴 有給'},
-    '欠勤':      {bg:'rgba(239,68,68,.13)', border:'#ef4444',text:'#991b1b',label:'😷 欠勤'},
-    'その他休日':{bg:'rgba(99,102,241,.13)',border:'#6366f1',text:'#3730a3',label:'🎌 休日'},
-  };
-
-  // 登録済み全作業員を列として表示（日報がない人も枠あり）
-  const displayWorkers=wf?activeWorkers().filter(w=>w===wf):activeWorkers();
-  const workerCols=displayWorkers.map(wName=>{
+  const workerCols=activeWorkers().map(wName=>{
     const r=dayReports.find(rp=>rp.worker===wName);
-    const status=r?.status||'通常';
-    const stStyle=STATUS_TL[status];
-
-    let blocks='';
-    if(stStyle){
-      // 有給・欠勤・その他休日：時間帯があれば位置指定ブロック、なければ全体
-      const sr=r?.extraTimes?.statusRange;
-      if(sr&&sr.includes('-')){
-        const[ss,se]=sr.split('-');
-        const[sh,sm]=ss.split(':').map(Number);
-        const[eh,em]=se.split(':').map(Number);
-        const top=(sh*60+sm-minH*60)*pxPerMin;
-        const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
-        blocks=height>0
-          ?`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${stStyle.border};opacity:.85;" title="${stStyle.label}\n${ss}〜${se}">${stStyle.label}<br>${ss}〜${se}</div>`
-          :`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
-      } else {
-        blocks=`<div style="position:absolute;inset:4px;border-radius:6px;background:${stStyle.bg};border:2px solid ${stStyle.border};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${stStyle.text};">${stStyle.label}</div>`;
-      }
-    } else if(r){
-      // 通常：作業行ブロック
-      blocks=(r.rows||[]).filter(rw=>rw.startTime&&rw.endTime).map(rw=>{
-        const taskObj=rw.taskId?tasks.find(t=>t.id===rw.taskId):null;
-        const site=taskObj?taskFullName(taskObj):(rw.taskName||'現場未設定');
-        const[sh,sm]=rw.startTime.split(':').map(Number);
-        const[eh,em]=rw.endTime.split(':').map(Number);
-        const top=(sh*60+sm-minH*60)*pxPerMin;
-        const height=((eh*60+em)-(sh*60+sm))*pxPerMin;
-        const color=getSiteColor(site);
-        const wt=(rw.workTypes||[]).join('・');
-        const label=wt?`${site}\n${wt}\n${rw.startTime}〜${rw.endTime}`:`${site}\n${rw.startTime}〜${rw.endTime}`;
-        const dispText=wt?`${site}　${wt}<br>${rw.startTime}〜${rw.endTime}`:`${site}<br>${rw.startTime}〜${rw.endTime}`;
-        return`<div class="timeline-block" style="top:${top}px;height:${height}px;background:${color}" title="${label}">${dispText}</div>`;
-      }).join('');
-      // 有給時間帯ブロック（通常勤務でも部分有給がある場合）
-      const plRange=r.extraTimes?.paidLeave;
-      if(plRange&&plRange.includes('-')){
-        const[ps,pe]=plRange.split('-');
-        const[psh,psm]=ps.split(':').map(Number);
-        const[peh,pem]=pe.split(':').map(Number);
-        const ptop=(psh*60+psm-minH*60)*pxPerMin;
-        const pheight=((peh*60+pem)-(psh*60+psm))*pxPerMin;
-        if(pheight>0){
-          const plStyle=STATUS_TL['有給'];
-          blocks+=`<div class="timeline-block" style="top:${ptop}px;height:${pheight}px;background:${plStyle.border};opacity:.85;" title="🌴 有給\n${ps}〜${pe}">🌴 有給<br>${ps}〜${pe}</div>`;
-        }
-      }
-    }
-
+    const{blocks,stStyle,status}=buildTlBlocks(r,minH,pxPerMin);
     const nameBadge=stStyle?`<span style="font-size:9px;padding:1px 5px;border-radius:99px;background:${stStyle.border};color:#fff;margin-left:4px;">${status}</span>`:'';
     return`<div class="timeline-worker-col">
       <div class="timeline-worker-name">${wName}${nameBadge}</div>
@@ -3307,13 +3354,10 @@ function renderTimeline(){
     </div>`;
   }).join('');
 
-  // 凡例
   const legend=Object.entries(siteColorMap).map(([site,color])=>
     `<div class="timeline-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:${color};display:inline-block;flex-shrink:0"></span>${site}</div>`
   ).join('');
-
-  el.innerHTML=`<div class="timeline-wrap">${timeAxis}${workerCols}</div>
-  <div class="timeline-legend">${legend}</div>`;
+  el.innerHTML=`<div class="timeline-wrap">${timeAxis}${workerCols}</div><div class="timeline-legend">${legend}</div>`;
 }
 
 function cancelEditReport(){
