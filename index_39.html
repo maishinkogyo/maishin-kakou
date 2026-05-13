@@ -488,7 +488,6 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="side-nav-item" onclick="switchMainTab('gantt')"><span>📅</span><span class="nav-label">ガント</span></div>
     <div class="side-nav-item" onclick="switchMainTab('production')"><span>📊</span><span class="nav-label">生産数量</span></div>
     <div class="side-nav-item" onclick="switchMainTab('report')"><span>📝</span><span class="nav-label">日報</span></div>
-    <div class="side-nav-item" onclick="switchMainTab('report-summary')"><span>📈</span><span class="nav-label">日報集計</span></div>
     <div class="side-nav-item" onclick="switchMainTab('unit-sales')"><span>🔗</span><span class="nav-label">ユニット販売</span></div>
     <div class="side-nav-item" onclick="switchMainTab('master')"><span>🗂️</span><span class="nav-label">マスタ管理</span></div>
     <div class="side-nav-item" onclick="switchMainTab('done')"><span>✅</span><span class="nav-label">完了済み</span></div>
@@ -509,7 +508,6 @@ select:focus,input:focus{border-color:var(--accent);}
   <div class="main-tab" onclick="switchMainTab('gantt')">ガントチャート</div>
   <div class="main-tab" onclick="switchMainTab('production')">📊 生産数量</div>
   <div class="main-tab" onclick="switchMainTab('report')">📝 日報</div>
-  <div class="main-tab" onclick="switchMainTab('report-summary')">📈 日報集計</div>
   <div class="main-tab" onclick="switchMainTab('master')">📋 マスタ管理</div>
   <div class="main-tab" onclick="switchMainTab('done')">完了済み</div>
 </div>
@@ -763,6 +761,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <!-- サブタブ -->
     <div class="report-subtabs">
       <div class="report-subtab active" onclick="switchReportTab('input')" id="rsubtab-input">📝 入力・一覧</div>
+      <div class="report-subtab" onclick="switchReportTab('summary')" id="rsubtab-summary">📈 集計</div>
       <div class="report-subtab" onclick="switchReportTab('timeline')" id="rsubtab-timeline">📅 タイムスケジュール</div>
     </div>
 
@@ -816,6 +815,25 @@ select:focus,input:focus{border-color:var(--accent);}
 
     </div><!-- /rpanel-input -->
 
+    <!-- 集計パネル -->
+    <div id="rpanel-summary" style="display:none">
+      <div class="rsum-filter">
+        <div class="form-group" style="margin:0">
+          <label>月</label>
+          <input type="month" id="rsumMonth" onchange="renderReportSummary()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>表示</label>
+          <select id="rsumView" onchange="renderReportSummary()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+            <option value="daily">日別集計</option>
+            <option value="person">人別集計</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rsumMonth').value='';renderReportSummary()">クリア</button>
+      </div>
+      <div id="reportSummaryContent"></div>
+    </div>
+
     <!-- タイムスケジュールパネル -->
     <div id="rpanel-timeline" style="display:none">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
@@ -832,30 +850,6 @@ select:focus,input:focus{border-color:var(--accent);}
   </div>
 </div>
 
-<!-- ══ 日報集計 ══ -->
-<div class="main-content" id="tab-report-summary">
-  <div class="report-wrap">
-
-    <!-- フィルター -->
-    <div class="rsum-filter">
-      <div class="form-group" style="margin:0">
-        <label>月</label>
-        <input type="month" id="rsumMonth" onchange="renderReportSummary()">
-      </div>
-      <div class="form-group" style="margin:0">
-        <label>表示</label>
-        <select id="rsumView" onchange="renderReportSummary()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-          <option value="daily">日別集計</option>
-          <option value="person">人別集計</option>
-        </select>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rsumMonth').value='';renderReportSummary()">クリア</button>
-    </div>
-
-    <div id="reportSummaryContent"></div>
-
-  </div>
-</div>
 
 <!-- ══ ユニット販売 ══ -->
 <div class="main-content" id="tab-unit-sales">
@@ -1829,7 +1823,6 @@ function showPdfMenu(){
       ['gantt',   '📅 ガントチャート',        'A3 横'],
       ['production','📊 生産数量レポート',   'A4 横'],
       ['report',  '📝 日報',                 'A4 縦'],
-      ['report-summary','📈 日報集計',       'A4 縦'],
       ['unit-sales','🔗 ユニット販売',       'A4 縦'],
     ];
     ov.innerHTML=`
@@ -1891,7 +1884,7 @@ function exportPdf(tab){
     report:`
       .report-form-section{display:none!important;}
       .report-list-section{display:block!important;}`,
-    'report-summary':'',
+
     'unit-sales':`
       #usSaleForm,.master-subtabs button[onclick*="lockUsSales"],.master-subtabs button[onclick*="showUsPwChange"]{display:none!important;}`,
   };
@@ -2461,21 +2454,20 @@ let currentMainTab='active';
 function switchMainTab(tab){
   currentMainTab=tab;
   document.querySelectorAll('.side-nav-item').forEach((el,i)=>{
-    el.classList.toggle('active',['active','gantt','production','report','report-summary','unit-sales','master','done'][i]===tab);
+    el.classList.toggle('active',['active','gantt','production','report','unit-sales','master','done'][i]===tab);
   });
-  document.querySelectorAll('.main-tab').forEach((el,i)=>el.classList.toggle('active',['active','gantt','production','report','report-summary','unit-sales','master','done'][i]===tab));
+  document.querySelectorAll('.main-tab').forEach((el,i)=>el.classList.toggle('active',['active','gantt','production','report','unit-sales','master','done'][i]===tab));
   document.querySelectorAll('.main-content').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   if(tab==='gantt')renderGantt();
   if(tab==='production'){initProductionSelects();renderProduction();}
   if(tab==='master')renderMasterTab();
   if(tab==='report')initReportTab();
-  if(tab==='report-summary')initReportSummary();
   if(tab==='unit-sales'){
     if(!usUnlocked){
       // パスワードモーダルを表示（先にタブ切替だけ行う）
       document.querySelectorAll('.side-nav-item').forEach((el,i)=>{
-        el.classList.toggle('active',['active','gantt','production','report','report-summary','unit-sales','master','done'][i]===tab);
+        el.classList.toggle('active',['active','gantt','production','report','unit-sales','master','done'][i]===tab);
       });
       document.querySelectorAll('.main-content').forEach(el=>el.classList.remove('active'));
       document.getElementById('tab-unit-sales').classList.add('active');
@@ -3176,9 +3168,16 @@ function editReport(id, e){
 // ── 日報サブタブ ──
 function switchReportTab(tab){
   document.getElementById('rpanel-input').style.display   = tab==='input'?'':'none';
+  document.getElementById('rpanel-summary').style.display = tab==='summary'?'':'none';
   document.getElementById('rpanel-timeline').style.display = tab==='timeline'?'':'none';
   document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
   document.getElementById('rsubtab-'+tab).classList.add('active');
+  if(tab==='summary'){
+    if(!document.getElementById('rsumMonth').value){
+      document.getElementById('rsumMonth').value = new Date().toISOString().slice(0,7);
+    }
+    renderReportSummary();
+  }
   if(tab==='timeline'){
     if(!document.getElementById('tlDate').value){
       document.getElementById('tlDate').value = document.getElementById('rptDate').value || new Date().toISOString().slice(0,10);
