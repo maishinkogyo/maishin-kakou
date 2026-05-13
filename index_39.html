@@ -3331,10 +3331,13 @@ function renderReportList(){
       <div class="report-card-header" onclick="this.nextElementSibling.classList.toggle('open')">
         <span class="report-card-date">${r.date}</span>
         <span class="report-card-worker">👤 ${r.worker}</span>
-        ${st ? stBadge : `<span class="report-card-summary">${siteNames}</span><span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">計 ${totalH}h</span>`}
-        ${extraStr}
-        <button onclick="editReport(${r.id},event)" style="background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px 8px;border-radius:5px;">✏️ 編集</button>
-        <button onclick="deleteReport(${r.id},event)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">🗑</button>
+        ${st ? stBadge : `<span class="report-card-summary">${siteNames}</span>`}
+        <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          ${st ? '' : `<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">計 ${totalH}h</span>`}
+          ${extraStr}
+          <button onclick="editReport(${r.id},event)" style="background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px 8px;border-radius:5px;">✏️ 編集</button>
+          <button onclick="deleteReport(${r.id},event)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">🗑</button>
+        </span>
       </div>
       <div class="report-card-body">
         ${st ? `<div style="padding:12px 0;font-size:13px;color:var(--text-muted);text-align:center;">${st}</div>` : detailRows}
