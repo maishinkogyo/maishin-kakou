@@ -219,9 +219,6 @@ select:focus,input:focus{border-color:var(--accent);}
 .rpt-edit-modal-body{overflow-y:auto;padding:20px;flex:1;}
 .rpt-edit-modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
 /* 日報ステータスタブ */
-.rpt-status-tab{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);transition:all .15s;}
-.rpt-status-tab:hover{border-color:var(--accent);color:var(--text);}
-.rpt-status-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 /* 日報サブタブ */
 .report-subtabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);}
 .report-subtab{padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
@@ -781,26 +778,10 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
       </div>
 
-      <!-- 勤怠ステータス -->
-      <div style="display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap;">
-        <button class="rpt-status-tab active" data-status="通常" onclick="setReportStatus('通常')">通常勤務</button>
-        <button class="rpt-status-tab" data-status="有給" onclick="setReportStatus('有給')">🌴 有給</button>
-        <button class="rpt-status-tab" data-status="欠勤" onclick="setReportStatus('欠勤')">欠勤</button>
-        <button class="rpt-status-tab" data-status="その他休日" onclick="setReportStatus('その他休日')">その他休日</button>
-      </div>
-
-      <!-- 現場別入力行（通常勤務のみ） -->
-      <div id="rptWorkSection">
+      <!-- 現場別入力行 -->
+      <div id="rptWorkSection" style="margin-top:12px;">
       <div id="reportRows"></div>
       <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addReportRow()">＋ 現場を追加</button>
-      </div>
-
-      <!-- 有給・欠勤・その他休日の時間帯 -->
-      <div id="rptStatusTimeSection" style="display:none;margin-top:12px;">
-        <div class="report-extra" style="margin-top:0;padding-top:0;border-top:none;">
-          <div class="form-group"><label id="rptStatusTimeLabel" style="min-width:4em;">時間帯</label><div class="rpt-time-range"><input type="time" id="rptStatusTimeStart" oninput="updateRptTimeHint('rptStatusTimeStart','rptStatusTimeEnd','rptStatusTimeHint')"><span>〜</span><input type="time" id="rptStatusTimeEnd" oninput="updateRptTimeHint('rptStatusTimeStart','rptStatusTimeEnd','rptStatusTimeHint')"><span class="rpt-time-hint" id="rptStatusTimeHint"></span></div></div>
-          <div class="form-group"><label>メモ</label><input type="text" id="rptStatusMemo" placeholder="連絡事項など" style="width:200px"></div>
-        </div>
       </div>
 
       <!-- 残業・有給・遅刻・早退 -->
@@ -2898,31 +2879,6 @@ function calcRowHours(row){
 let editingReportId = null; // 編集中の日報ID（nullなら新規）
 let currentReportStatus = '通常';
 
-const STATUS_TIME_LABELS={'有給':'有給時間帯','欠勤':'欠勤時間帯','その他休日':'休日時間帯'};
-function setReportStatus(status){
-  currentReportStatus = status;
-  document.querySelectorAll('.rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.status===status));
-  const isWork = status==='通常';
-  document.getElementById('rptWorkSection').style.display       = isWork?'':'none';
-  document.getElementById('rptExtraSection').style.display      = isWork?'':'none';
-  document.getElementById('rptStatusTimeSection').style.display = isWork?'none':'';
-  if(!isWork){
-    const lbl=document.getElementById('rptStatusTimeLabel');
-    if(lbl) lbl.textContent=STATUS_TIME_LABELS[status]||'時間帯';
-  }
-}
-function setEditReportStatus(status){
-  document.querySelectorAll('#rptEditModal .rpt-status-tab').forEach(b=>b.classList.toggle('active', b.dataset.estatus===status));
-  const isWork = status==='通常';
-  document.getElementById('editRptWorkSection').style.display       = isWork?'':'none';
-  document.getElementById('editRptExtraSection').style.display      = isWork?'':'none';
-  document.getElementById('editRptStatusTimeSection').style.display = isWork?'none':'';
-  if(!isWork){
-    const lbl=document.getElementById('editRptStatusTimeLabel');
-    if(lbl) lbl.textContent=STATUS_TIME_LABELS[status]||'時間帯';
-  }
-}
-
 async function saveReport(){
   const date   = document.getElementById('rptDate').value;
   const worker = document.getElementById('rptWorker').value;
@@ -2943,17 +2899,15 @@ async function saveReport(){
     if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
   });
 
-  const status = currentReportStatus;
-  if(status==='通常' && !rows.length){alert('現場・作業時間を入力してください');return;}
+  const status = '通常';
+  if(!rows.length){alert('現場・作業時間を入力してください');return;}
 
   const extraTimes = getExtraTimes('rpt');
   const overtime   = timeRangeToHours(...(extraTimes.overtime.split('-')));
   const late       = timeRangeToHours(...(extraTimes.late.split('-')));
   const early      = timeRangeToHours(...(extraTimes.early.split('-')));
   const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
-  const memo = status==='通常'
-    ? (document.getElementById('rptMemo').value.trim())
-    : (extraTimes.statusMemo||'');
+  const memo = document.getElementById('rptMemo').value.trim();
 
   if(editingReportId !== null){
     // 更新モード
@@ -3041,7 +2995,6 @@ function resetReportForm(){
   reportRowCount=0;
   setExtraTimesUI('rpt',{});
   document.getElementById('rptMemo').value='';
-  setReportStatus('通常');
   addReportRow();
 }
 
@@ -3089,7 +3042,7 @@ async function saveReportEdit(){
   if(!date){alert('日付を入力してください');return;}
   if(!worker){alert('作業者を選択してください');return;}
 
-  const status = document.querySelector('#rptEditModal .rpt-status-tab.active')?.dataset.estatus || '通常';
+  const status = '通常';
 
   const rows = [];
   document.querySelectorAll('#editReportRows .report-row').forEach(row=>{
@@ -3104,16 +3057,14 @@ async function saveReportEdit(){
     if(taskId||hrs>0) rows.push({taskId, taskName, workTypes:wts, hours:hrs, startTime, endTime});
   });
 
-  if(status==='通常' && !rows.length){alert('現場・作業時間を入力してください');return;}
+  if(!rows.length){alert('現場・作業時間を入力してください');return;}
 
   const extraTimes = getExtraTimes('editRpt');
   const overtime   = timeRangeToHours(...(extraTimes.overtime.split('-')));
   const late       = timeRangeToHours(...(extraTimes.late.split('-')));
   const early      = timeRangeToHours(...(extraTimes.early.split('-')));
   const paidLeave  = timeRangeToHours(...(extraTimes.paidLeave.split('-')));
-  const memo = status==='通常'
-    ? (document.getElementById('editRptMemo').value.trim())
-    : (extraTimes.statusMemo||'');
+  const memo = document.getElementById('editRptMemo').value.trim();
 
   const rep = reports.find(r=>r.id===editingReportId);
   if(rep){ Object.assign(rep, {date, worker, rows, overtime, late, early, paidLeave, memo, status, extraTimes}); }
@@ -3142,9 +3093,6 @@ function editReport(id, e){
   ws.innerHTML = '<option value="">選択してください</option>' + workers.map(w=>`<option value="${w}">${w}</option>`).join('');
   ws.value = r.worker;
 
-  // ステータス
-  setEditReportStatus(r.status||'通常');
-
   // 行を再構築
   document.getElementById('editReportRows').innerHTML='';
   editReportRowCount=0;
@@ -3162,10 +3110,9 @@ function editReport(id, e){
     calcRowHours(lastRow);
   });
 
-  // 残業・有給・遅刻・早退・ステータス時間帯・メモ
-  const et = {...(r.extraTimes||{}), statusMemo: (r.status!=='通常' ? r.memo : '') };
-  setExtraTimesUI('editRpt', et);
-  document.getElementById('editRptMemo').value = r.status==='通常' ? (r.memo||'') : '';
+  // 残業・有給・遅刻・早退・メモ
+  setExtraTimesUI('editRpt', r.extraTimes||{});
+  document.getElementById('editRptMemo').value = r.memo||'';
 
   // モーダルを開く
   document.getElementById('rptEditModal').style.display='flex';
@@ -4289,22 +4236,9 @@ async function initApp(){
         <div class="form-group" style="margin:0"><label>日付</label><input type="date" id="editRptDate"></div>
         <div class="form-group" style="margin:0"><label>作業者</label><select id="editRptWorker"><option value="">選択してください</option></select></div>
       </div>
-      <div style="display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap;">
-        <button class="rpt-status-tab active" data-estatus="通常" onclick="setEditReportStatus('通常')">通常勤務</button>
-        <button class="rpt-status-tab" data-estatus="有給" onclick="setEditReportStatus('有給')">🌴 有給</button>
-        <button class="rpt-status-tab" data-estatus="欠勤" onclick="setEditReportStatus('欠勤')">欠勤</button>
-        <button class="rpt-status-tab" data-estatus="その他休日" onclick="setEditReportStatus('その他休日')">その他休日</button>
-      </div>
       <div id="editRptWorkSection" style="margin-top:12px;">
         <div id="editReportRows"></div>
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addEditReportRow()">＋ 現場を追加</button>
-      </div>
-      <!-- 有給・欠勤・その他休日の時間帯（編集モーダル） -->
-      <div id="editRptStatusTimeSection" style="display:none;margin-top:12px;">
-        <div class="report-extra" style="margin-top:0;padding-top:0;border-top:none;">
-          <div class="form-group"><label id="editRptStatusTimeLabel" style="min-width:4em;">時間帯</label><div class="rpt-time-range"><input type="time" id="editRptStatusTimeStart" oninput="updateRptTimeHint('editRptStatusTimeStart','editRptStatusTimeEnd','editRptStatusTimeHint')"><span>〜</span><input type="time" id="editRptStatusTimeEnd" oninput="updateRptTimeHint('editRptStatusTimeStart','editRptStatusTimeEnd','editRptStatusTimeHint')"><span class="rpt-time-hint" id="editRptStatusTimeHint"></span></div></div>
-          <div class="form-group"><label>メモ</label><input type="text" id="editRptStatusMemo" placeholder="連絡事項など" style="width:200px"></div>
-        </div>
       </div>
       <div class="report-extra" id="editRptExtraSection" style="margin-top:12px;">
         <div class="form-group"><label>残業</label><div class="rpt-time-range"><input type="time" id="editRptOvertimeStart" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span>〜</span><input type="time" id="editRptOvertimeEnd" oninput="updateRptTimeHint('editRptOvertimeStart','editRptOvertimeEnd','editRptOvertimeHint')"><span class="rpt-time-hint" id="editRptOvertimeHint"></span></div></div>
