@@ -621,6 +621,7 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="master-subtab" onclick="switchMasterTab('materials')">🔩 材料</div>
       <div class="master-subtab" onclick="switchMasterTab('vehicles')">🚛 車両</div>
       <div class="master-subtab" onclick="switchMasterTab('workers')">👤 作業者</div>
+      <div class="master-subtab" onclick="switchMasterTab('accessories')">📦 付属品</div>
     </div>
 
     <!-- タスク追加パネル -->
@@ -749,6 +750,28 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
       </div>
       <div id="workerMasterList"></div>
+    </div>
+
+    <!-- 付属品パネル -->
+    <div class="master-panel" id="master-panel-accessories">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-title" style="padding-top:0;margin-bottom:0">付属品リスト</div>
+        <button class="btn btn-primary btn-sm" onclick="showAddAccessory()">＋ 付属品を追加</button>
+      </div>
+      <div id="accessoryAddForm" style="display:none;background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div class="add-title">新しい付属品を追加</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+          <div class="form-group"><label>付属品名</label><input type="text" id="newAccName" placeholder="例：アンカーボルト M12"></div>
+          <div class="form-group"><label>メモ（任意）</label><input type="text" id="newAccNote" placeholder="例：規格・数量など"></div>
+          <div class="form-group"><label>&nbsp;</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary" onclick="addAccessory()">追加</button>
+              <button class="btn btn-secondary" onclick="hideAddAccessory()">キャンセル</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="accessoryList"></div>
     </div>
 
   </div>
@@ -1005,6 +1028,8 @@ let materials = []; // {id, name, note}
 let nextMatId = 1;
 let vehicles = []; // {id, name, note}
 let nextVehId = 1;
+let accessories = []; // {id, name, note}
+let nextAccId = 1;
 
 // ── Tasks — workers is now an array ──
 let tasks = [
@@ -1094,9 +1119,10 @@ function renderMasterTab(){
 function switchMasterTab(tab){
   currentMasterTab = tab;
   document.querySelectorAll('.master-subtab').forEach((el,i)=>
-    el.classList.toggle('active', ['tasks','materials','vehicles','workers'][i]===tab));
+    el.classList.toggle('active', ['tasks','materials','vehicles','workers','accessories'][i]===tab));
   document.querySelectorAll('.master-panel').forEach(el=>el.classList.remove('active'));
   document.getElementById('master-panel-'+tab).classList.add('active');
+  if(tab==='accessories') renderAccessoryList();
 }
 
 function renderWorkerMasterList(){
@@ -1270,6 +1296,80 @@ function renderMaterialList(){
   }).join('');
 }
 
+
+// ── 付属品リスト ──
+function showAddAccessory(){ document.getElementById('accessoryAddForm').style.display='block'; }
+function hideAddAccessory(){
+  document.getElementById('accessoryAddForm').style.display='none';
+  document.getElementById('newAccName').value='';
+  document.getElementById('newAccNote').value='';
+}
+async function addAccessory(){
+  const name = document.getElementById('newAccName').value.trim();
+  if(!name){ alert('付属品名を入力してください'); return; }
+  if(accessories.some(a=>a.name===name)){ alert('同じ名前の付属品がすでにあります'); return; }
+  const acc = {id:nextAccId++, name, note: document.getElementById('newAccNote').value.trim()};
+  accessories.push(acc);
+  hideAddAccessory();
+  renderAccessoryList();
+  try{ await sb.from('accessories').insert({id:acc.id, name:acc.name, note:acc.note||null}); flashSaved(); }
+  catch(e){ console.error('付属品保存失敗:',e); }
+  saveLocal();
+}
+async function deleteAccessory(id){
+  const a = accessories.find(a=>a.id===id);
+  if(!a) return;
+  if(!confirm(`「${a.name}」を削除しますか？`)) return;
+  accessories = accessories.filter(x=>x.id!==id);
+  renderAccessoryList();
+  try{ await sb.from('accessories').delete().eq('id',id); flashSaved(); }
+  catch(e){ console.error('付属品削除失敗:',e); }
+  saveLocal();
+}
+function editAccessory(id){
+  const a=accessories.find(a=>a.id===id); if(!a)return;
+  const el=document.getElementById(`acc-item-${id}`); if(!el)return;
+  el.innerHTML=`
+    <span style="font-size:18px">📦</span>
+    <input type="text" id="acc-edit-name-${id}" value="${a.name.replace(/"/g,'&quot;')}" placeholder="付属品名"
+      style="flex:1;padding:5px 8px;border-radius:6px;border:1.5px solid var(--accent);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;">
+    <input type="text" id="acc-edit-note-${id}" value="${(a.note||'').replace(/"/g,'&quot;')}" placeholder="メモ（任意）"
+      style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+    <button class="btn btn-primary btn-sm" onclick="saveAccessoryEdit(${id})">保存</button>
+    <button class="btn btn-secondary btn-sm" onclick="renderAccessoryList()">キャンセル</button>`;
+  document.getElementById(`acc-edit-name-${id}`).focus();
+}
+async function saveAccessoryEdit(id){
+  const a=accessories.find(a=>a.id===id); if(!a)return;
+  const newName=document.getElementById(`acc-edit-name-${id}`).value.trim();
+  const newNote=document.getElementById(`acc-edit-note-${id}`).value.trim();
+  if(!newName){alert('付属品名を入力してください');return;}
+  if(accessories.some(x=>x.id!==id&&x.name===newName)){alert('同じ名前の付属品がすでにあります');return;}
+  a.name=newName; a.note=newNote;
+  renderAccessoryList();
+  try{await sb.from('accessories').upsert({id:a.id,name:a.name,note:a.note||null});flashSaved();}
+  catch(e){console.error('付属品更新失敗:',e);}
+  saveLocal();
+}
+function renderAccessoryList(){
+  const el=document.getElementById('accessoryList'); if(!el)return;
+  if(!accessories.length){
+    el.innerHTML='<div style="color:var(--text-muted);padding:20px 0;text-align:center;">付属品がまだ登録されていません</div>';
+    return;
+  }
+  el.innerHTML=accessories.map(a=>`
+    <div class="task-card" style="margin-bottom:8px;">
+      <div id="acc-item-${a.id}" style="padding:12px 14px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:18px">📦</span>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">${a.name}</div>
+          ${a.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${a.note}</div>`:''}
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="editAccessory(${a.id})">✏️ 編集</button>
+        <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteAccessory(${a.id})">削除</button>
+      </div>
+    </div>`).join('');
+}
 
 // ── 車両リスト ──
 function showAddVehicle(){ document.getElementById("vehicleAddForm").style.display="block"; }
@@ -2560,7 +2660,8 @@ async function loadData(){
       {data:dbVehs,   error:e5},
       {data:dbRpts,   error:e6},
       {data:dbSales,  error:e7},
-      {data:dbBuyers, error:e8}
+      {data:dbBuyers,  error:e8},
+      {data:dbAccs,    error:e9}
     ] = await Promise.all([
       sb.from('tasks').select('*').order('num'),
       sb.from('workers_list').select('*').order('sort_order'),
@@ -2569,7 +2670,8 @@ async function loadData(){
       sb.from('vehicles').select('*').order('id'),
       sb.from('daily_reports').select('*').order('date'),
       sb.from('unit_sales').select('*').order('date'),
-      sb.from('buyers').select('*').order('id')
+      sb.from('buyers').select('*').order('id'),
+      sb.from('accessories').select('*').order('id')
     ]);
     if(e1) throw e1; if(e2) throw e2; if(e3) throw e3;
     tasks   = dbTasks.map(dbToTask);
@@ -2620,6 +2722,13 @@ async function loadData(){
       buyers = _cache.buyers; nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
       console.warn('buyers DB失敗、キャッシュ使用:', e8.message);
     }
+    if(dbAccs && !e9) {
+      accessories = dbAccs.map(r=>({id:r.id, name:r.name, note:r.note||''}));
+      nextAccId = accessories.length ? Math.max(...accessories.map(a=>a.id))+1 : 1;
+    } else if(e9 && _cache.accessories) {
+      accessories = _cache.accessories; nextAccId = accessories.length ? Math.max(...accessories.map(a=>a.id))+1 : 1;
+      console.warn('accessories DB失敗、キャッシュ使用:', e9.message);
+    }
     const ni = dbMeta.find(r=>r.key==='nextId');
     const nn = dbMeta.find(r=>r.key==='nextNum');
     const wr = dbMeta.find(r=>r.key==='workerRetireDates');
@@ -2640,7 +2749,8 @@ async function loadData(){
         if(d.vehicles)  { vehicles  = d.vehicles;  nextVehId = vehicles.length  ? Math.max(...vehicles.map(v=>v.id))+1  : 1; }
         if(d.reports)   { reports   = d.reports;   nextReportId = reports.length ? Math.max(...reports.map(r=>r.id))+1 : 1; }
         if(d.sales)     { sales     = d.sales;     nextSaleId   = sales.length   ? Math.max(...sales.map(s=>s.id))+1   : 1; }
-        if(d.buyers)    { buyers    = d.buyers;    nextBuyerId  = buyers.length  ? Math.max(...buyers.map(b=>b.id))+1  : 1; }
+        if(d.buyers)      { buyers      = d.buyers;      nextBuyerId  = buyers.length      ? Math.max(...buyers.map(b=>b.id))+1      : 1; }
+        if(d.accessories) { accessories = d.accessories; nextAccId    = accessories.length  ? Math.max(...accessories.map(a=>a.id))+1  : 1; }
         if(d.nextId)  nextId  = d.nextId;
         if(d.nextNum) nextNum = d.nextNum;
         showOfflineBanner();
@@ -4222,7 +4332,7 @@ function renderPersonSummary(list, mf){
 // ── ローカルキャッシュ保存（パスワードのみ）──
 const STORAGE_KEY = 'taskManager_v1';
 const PW_KEY_LS   = 'taskManager_pw';
-function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks, workers, workerRetireDates, materials, vehicles, reports, sales, buyers, nextId, nextNum, nextMatId, nextVehId, nextReportId, nextSaleId, nextBuyerId})); }
+function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks, workers, workerRetireDates, materials, vehicles, accessories, reports, sales, buyers, nextId, nextNum, nextMatId, nextVehId, nextAccId, nextReportId, nextSaleId, nextBuyerId})); }
 
 // ══ LOCK / AUTH ══
 const PW_KEY = PW_KEY_LS;
