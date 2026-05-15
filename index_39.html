@@ -785,7 +785,6 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="report-subtabs">
       <div class="report-subtab active" onclick="switchReportTab('input')" id="rsubtab-input">📝 入力・一覧</div>
       <div class="report-subtab" onclick="switchReportTab('summary')" id="rsubtab-summary">📈 集計</div>
-      <div class="report-subtab" onclick="switchReportTab('transport')" id="rsubtab-transport">🚛 運搬集計</div>
       <div class="report-subtab" onclick="switchReportTab('timeline')" id="rsubtab-timeline">📅 タイムスケジュール</div>
     </div>
 
@@ -852,29 +851,12 @@ select:focus,input:focus{border-color:var(--accent);}
           <select id="rsumView" onchange="renderReportSummary()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
             <option value="daily">日別集計</option>
             <option value="person">人別集計</option>
+            <option value="transport">運搬集計</option>
           </select>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rsumMonth').value='';renderReportSummary()">クリア</button>
       </div>
       <div id="reportSummaryContent"></div>
-    </div>
-
-    <!-- 運搬集計パネル -->
-    <div id="rpanel-transport" style="display:none">
-      <div class="rsum-filter">
-        <div class="form-group" style="margin:0">
-          <label>月</label>
-          <input type="month" id="transMonth" onchange="renderTransportSummary()">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>作業者</label>
-          <select id="transWorker" onchange="renderTransportSummary()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-            <option value="">全員</option>
-          </select>
-        </div>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('transMonth').value='';document.getElementById('transWorker').value='';renderTransportSummary()">クリア</button>
-      </div>
-      <div id="transportSummaryContent"></div>
     </div>
 
     <!-- タイムスケジュールパネル -->
@@ -3308,10 +3290,9 @@ function editReport(id, e){
 
 // ── 日報サブタブ ──
 function switchReportTab(tab){
-  document.getElementById('rpanel-input').style.display     = tab==='input'?'':'none';
-  document.getElementById('rpanel-summary').style.display   = tab==='summary'?'':'none';
-  document.getElementById('rpanel-transport').style.display = tab==='transport'?'':'none';
-  document.getElementById('rpanel-timeline').style.display  = tab==='timeline'?'':'none';
+  document.getElementById('rpanel-input').style.display    = tab==='input'?'':'none';
+  document.getElementById('rpanel-summary').style.display  = tab==='summary'?'':'none';
+  document.getElementById('rpanel-timeline').style.display = tab==='timeline'?'':'none';
   document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
   document.getElementById('rsubtab-'+tab).classList.add('active');
   if(tab==='summary'){
@@ -3319,17 +3300,6 @@ function switchReportTab(tab){
       document.getElementById('rsumMonth').value = new Date().toISOString().slice(0,7);
     }
     renderReportSummary();
-  }
-  if(tab==='transport'){
-    if(!document.getElementById('transMonth').value){
-      document.getElementById('transMonth').value = new Date().toISOString().slice(0,7);
-    }
-    // 作業者セレクト更新
-    const sel = document.getElementById('transWorker');
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">全員</option>' + workers.map(w=>`<option value="${w}">${w}</option>`).join('');
-    if(cur) sel.value = cur;
-    renderTransportSummary();
   }
   if(tab==='timeline'){
     if(!document.getElementById('tlDate').value){
@@ -3341,16 +3311,13 @@ function switchReportTab(tab){
 }
 
 // ── 運搬集計 ──
-function renderTransportSummary(){
-  const el = document.getElementById('transportSummaryContent'); if(!el) return;
-  const mf = document.getElementById('transMonth').value;
-  const wf = document.getElementById('transWorker').value;
+function renderTransportSummary(list, mf, el){
+  if(!el) el = document.getElementById('transportSummaryContent');
+  if(!el) return;
 
   // うんぱんを含む行だけ抽出
   let rows = [];
-  reports.forEach(r=>{
-    if(mf && !r.date.startsWith(mf)) return;
-    if(wf && r.worker !== wf) return;
+  (list||reports).forEach(r=>{
     r.rows.forEach(rw=>{
       if(!(rw.workTypes||[]).includes('うんぱん')) return;
       const taskObj = rw.taskId ? tasks.find(t=>t.id===rw.taskId) : null;
@@ -4373,8 +4340,9 @@ function renderReportSummary(){
     return;
   }
 
-  if(view==='daily') el.innerHTML = renderDailySummary(list, mf);
-  else               el.innerHTML = renderPersonSummary(list, mf);
+  if(view==='daily')          el.innerHTML = renderDailySummary(list, mf);
+  else if(view==='transport') { renderTransportSummary(list, mf, el); return; }
+  else                        el.innerHTML = renderPersonSummary(list, mf);
 }
 
 // 月の日付一覧を生成
