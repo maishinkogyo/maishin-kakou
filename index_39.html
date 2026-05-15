@@ -1454,13 +1454,6 @@ function renderVehicleList(){
   </div>`).join("");
 }
 
-function selectTransportVehicle(taskId, el, vehicleName){
-  const container = document.getElementById("tveh-tabs-"+taskId);
-  container.querySelectorAll(".unit-tab").forEach(t=>t.classList.remove("active"));
-  el.classList.add("active");
-  document.getElementById("tveh-selected-"+taskId).value = vehicleName;
-}
-
 function addTransportLog(id){
   const t = tasks.find(t=>t.id===id); if(!t) return;
   const date  = document.getElementById("tlog-date-"+id).value;
@@ -1703,13 +1696,14 @@ function taskDetailHTML(t){
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">進捗 ${tPct}%</div>
         </div>
-        <div class="transport-vehicle-tabs" id="tveh-tabs-${t.id}">
-          ${vehicles.length
-            ? vehicles.map((v,i)=>`<span class="unit-tab${i===0?' active':''}" onclick="selectTransportVehicle(${t.id},this,'${v.name.replace(/'/g,"\\'")}'">${v.name}</span>`).join('')
-            : '<span style="font-size:12px;color:var(--text-muted)">車両リストに車両を追加してください</span>'
-          }
+        <div class="transport-input-row" style="margin-bottom:8px;">
+          <select id="tveh-selected-${t.id}" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+            ${vehicles.length
+              ? vehicles.map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}">${v.name}</option>`).join('')
+              : '<option value="">車両未登録</option>'
+            }
+          </select>
         </div>
-        <input type="hidden" id="tveh-selected-${t.id}" value="${vehicles[0]?.name||''}">
         <div class="transport-input-row">
           <input type="date" id="tlog-date-${t.id}" value="${todayStr}">
           <input type="number" id="tlog-amt-${t.id}" placeholder="kg数" min="0.1" step="0.1">
