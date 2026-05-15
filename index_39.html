@@ -4282,7 +4282,7 @@ function getMonthDays(mf){
 function buildSiteTable(list, days, filterWorker=''){
   // {site: {date: hours}} と {site: {worker: {date: hours}}} を同時に集計
   const siteMap = {};
-  const siteWtMap = {}; // {site: {workType: {date: hours}}}
+  const siteWorkerMap = {}; // {site: {worker: {date: hours}}}
   list.forEach(r=>{
     if(filterWorker && r.worker !== filterWorker) return;
     r.rows.forEach(rw=>{
@@ -4292,13 +4292,10 @@ function buildSiteTable(list, days, filterWorker=''){
       const site=taskObj?getTaskNames(taskObj).main:(rawName.includes(' ／ ')?rawName.split(' ／ ')[0]:rawName);
       if(!siteMap[site]) siteMap[site]={};
       siteMap[site][r.date] = (siteMap[site][r.date]||0) + rw.hours;
-      // 作業種別内訳
-      if(!siteWtMap[site]) siteWtMap[site]={};
-      const wts = (rw.workTypes||[]).length ? rw.workTypes : ['未分類'];
-      wts.forEach(wt=>{
-        if(!siteWtMap[site][wt]) siteWtMap[site][wt]={};
-        siteWtMap[site][wt][r.date] = (siteWtMap[site][wt][r.date]||0) + rw.hours;
-      });
+      // 作業者別内訳
+      if(!siteWorkerMap[site]) siteWorkerMap[site]={};
+      if(!siteWorkerMap[site][r.worker]) siteWorkerMap[site][r.worker]={};
+      siteWorkerMap[site][r.worker][r.date] = (siteWorkerMap[site][r.worker][r.date]||0) + rw.hours;
     });
   });
 
@@ -4328,18 +4325,18 @@ function buildSiteTable(list, days, filterWorker=''){
     }).join('');
     const manDays = (rowTotal/7).toFixed(1);
 
-    // 内訳行（作業種別）— 同じtbodyに直接追加してcolspan不要に
-    const wtMap = siteWtMap[site]||{};
-    const wtNames = Object.keys(wtMap).sort();
-    const detailRows = wtNames.map(wt=>{
-      const wTotal = days.reduce((s,d)=>s+(wtMap[wt][d]||0),0);
+    // 内訳行（作業者別）— 同じtbodyに直接追加してcolspan不要に
+    const workerMap = siteWorkerMap[site]||{};
+    const workerNames = Object.keys(workerMap).sort();
+    const detailRows = workerNames.map(wk=>{
+      const wTotal = days.reduce((s,d)=>s+(workerMap[wk][d]||0),0);
       if(!wTotal) return '';
       const wCells = days.map(d=>{
-        const v = wtMap[wt][d]||0;
+        const v = workerMap[wk][d]||0;
         return`<td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;padding:3px 2px;border-top:1px dashed var(--border);color:${v>0?'var(--text)':''};">${v>0?v:''}</td>`;
       }).join('');
       return`<tr class="${detailId}" style="display:none;background:var(--surface2);">
-        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);border-top:1px dashed var(--border);">${wt}</td>
+        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);border-top:1px dashed var(--border);">👤 ${wk}</td>
         ${wCells}
         <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:2px solid var(--border);border-top:1px dashed var(--border);">${wTotal}</td>
         <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:1px solid var(--border);border-top:1px dashed var(--border);">${(wTotal/7).toFixed(1)}</td>
