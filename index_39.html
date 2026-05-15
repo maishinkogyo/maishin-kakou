@@ -622,7 +622,6 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="master-subtab" onclick="switchMasterTab('vehicles')">🚛 車両</div>
       <div class="master-subtab" onclick="switchMasterTab('workers')">👤 作業者</div>
       <div class="master-subtab" onclick="switchMasterTab('accessories')">📦 付属品</div>
-      <div class="master-subtab" onclick="switchMasterTab('catalog')">📋 カタログ</div>
     </div>
 
     <!-- タスク追加パネル -->
@@ -773,193 +772,6 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
       </div>
       <div id="accessoryList"></div>
-    </div>
-
-    <!-- カタログパネル -->
-    <div class="master-panel" id="master-panel-catalog">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <div class="section-title" style="padding-top:0;margin-bottom:0">スペーサーカタログ　<span style="font-size:11px;color:var(--text-muted);font-weight:400;">京都スペーサー（兵庫）</span></div>
-        <input type="text" id="catalogSearch" placeholder="🔍 品名で検索…" oninput="filterCatalog(this.value)"
-          style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;width:220px;">
-      </div>
-      <div style="overflow-x:auto;">
-      <table id="catalogTable" style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:var(--surface2);position:sticky;top:0;">
-            <th style="border:1px solid var(--border);padding:6px 10px;text-align:left;white-space:nowrap;">カテゴリ</th>
-            <th style="border:1px solid var(--border);padding:6px 10px;text-align:left;">品名 / サイズ</th>
-          </tr>
-        </thead>
-        <tbody id="catalogBody">
-<!-- ── コンクリートサイコロ ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">コンクリートサイコロ（中国製）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">40×50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">40×60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">50×60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">60×70（60円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大60（90円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大70（90円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大80（90円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大90（90円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大100（90円）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">大120（90円）</td></tr>
-<!-- ── P板フレート ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">P板フレート</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">50×60×70</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100×150〜200</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100×180〜200×210</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100×200〜220×230</td></tr>
-<!-- ── Pサイコロ ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">Pサイコロ</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">70×80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">90×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">110×120</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">130×140</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">150×160</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;color:var(--text-muted);font-size:11px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">170×180</td></tr>
-<!-- ── Pトーナツ ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">Pトーナツ</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">4×5×6</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">5×6×7</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">6×7×8</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">7×8×9×10</td></tr>
-<!-- ── KS高強度（壁・柱用） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">KS高強度（壁・柱用）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H35</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H45</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H70</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H90</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H110</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H120</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H130</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H140</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D13-16</td><td style="border:1px solid var(--border);padding:4px 10px;">D13-16×H150</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H35</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H45</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H70</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H90</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D19-22</td><td style="border:1px solid var(--border);padding:4px 10px;">D19-22×H100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H35</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H45</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H70</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D25-29</td><td style="border:1px solid var(--border);padding:4px 10px;">D25-29×H90</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D32-35</td><td style="border:1px solid var(--border);padding:4px 10px;">D32-35×H30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D32-35</td><td style="border:1px solid var(--border);padding:4px 10px;">D32-35×H35</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D32-35</td><td style="border:1px solid var(--border);padding:4px 10px;">D32-35×H40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;font-size:11px;color:var(--text-muted);">D32-35</td><td style="border:1px solid var(--border);padding:4px 10px;">D32-35×H45</td></tr>
-<!-- ── KS高強度（スラブ用） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">KS高強度（スラブ用）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">2530型（SH-30×35×36）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">3040型（SH-35×40）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">3545型（SH-40×45×50）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">4050型（SH-45×50）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">5060型（SH-50×55×60）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">6070型（SH-55×60×70）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">7080型（SH-60×70×75×80）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">8090型</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">90110型</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100110型（SH-80×100×110）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100150型（SH-120×130）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">140150型（SH-140×150）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L20型（SHL-20）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L3035型（SHL-30×35）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L3540型（SHL-35×40）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L4045型（SHL-40×45）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L5055型（SHL-50×55）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L6070型（SHL-60×70）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L7080型（SHL-70×80）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">L90100型（SHL-90×100）</td></tr>
-<!-- ── デッキ下端用 ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">デッキ下端用</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">GL15×H30×L1200</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">E230×H30×L1200</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">E215×H30×L1200</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">P230×H20×45×L1200</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">P900×H30×L1200（L型）</td></tr>
-<!-- ── ワンタッチ（PL） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">ワンタッチ（PL）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">H30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">H40</td></tr>
-<!-- ── PMスペーサー ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">PMスペーサー</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">PM6-30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">PM6-40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">PM6-50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">PM6-60</td></tr>
-<!-- ── S型金物（JASS5） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">S型金物（JASS5）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">22×58</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">25×65.5</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">29×76.5</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">32×84</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">35×92.5</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">38×100</td></tr>
-<!-- ── S型金物（廻） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">S型金物（廻）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">22×60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">25×75</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">25×80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">29×80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">29×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">32×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">35×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">38×100</td></tr>
-<!-- ── プラスターG（廻） ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">プラスターG（廻）</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×30</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×40</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×50</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×60</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×70</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×75</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">10-13×95</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">13-16×80</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">13-16×90</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">13-16×95</td></tr>
-<!-- ── ボリUD ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">ボリUD</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×90</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×120</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×140</td></tr>
-<!-- ── 井桁コーナーフック ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">井桁コーナーフック</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">39×100</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">39×120</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">39×140</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">39×160</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">30×100</td></tr>
-<!-- ── KSスーパーヒッチ ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">KSスーパーヒッチ</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100ピッチ</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">150ピッチ</td></tr>
-<!-- ── KSジャッキ ── -->
-<tr class="cat-row" style="background:#fef9c3;font-weight:700;"><td colspan="2" style="border:1px solid var(--border);padding:5px 10px;">KSジャッキ</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">HLK-1000</td></tr>
-<tr><td style="border:1px solid var(--border);padding:4px 10px;"></td><td style="border:1px solid var(--border);padding:4px 10px;">100ピッチ</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">※ コンクリートサイコロ・組束線のみ 袋・箱単位</div>
     </div>
 
   </div>
@@ -1308,7 +1120,7 @@ function renderMasterTab(){
 function switchMasterTab(tab){
   currentMasterTab = tab;
   document.querySelectorAll('.master-subtab').forEach((el,i)=>
-    el.classList.toggle('active', ['tasks','materials','vehicles','workers','accessories','catalog'][i]===tab));
+    el.classList.toggle('active', ['tasks','materials','vehicles','workers','accessories'][i]===tab));
   document.querySelectorAll('.master-panel').forEach(el=>el.classList.remove('active'));
   document.getElementById('master-panel-'+tab).classList.add('active');
   if(tab==='accessories') renderAccessoryList();
@@ -1560,27 +1372,6 @@ function renderAccessoryList(){
     </div>`).join('');
 }
 
-// ── カタログ検索 ──
-function filterCatalog(q){
-  const kw = q.trim().toLowerCase();
-  document.querySelectorAll('#catalogBody tr').forEach(tr=>{
-    if(tr.classList.contains('cat-row')){ tr.style.display=''; return; }
-    const txt = tr.textContent.toLowerCase();
-    tr.style.display = (!kw || txt.includes(kw)) ? '' : 'none';
-  });
-  // キーワードがあるとき、空カテゴリ行を隠す
-  if(kw){
-    document.querySelectorAll('#catalogBody tr.cat-row').forEach(catTr=>{
-      let sib = catTr.nextElementSibling;
-      let hasVisible = false;
-      while(sib && !sib.classList.contains('cat-row')){
-        if(sib.style.display !== 'none') hasVisible = true;
-        sib = sib.nextElementSibling;
-      }
-      catTr.style.display = hasVisible ? '' : 'none';
-    });
-  }
-}
 
 // ── 車両リスト ──
 function showAddVehicle(){ document.getElementById("vehicleAddForm").style.display="block"; }
