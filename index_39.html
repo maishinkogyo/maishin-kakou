@@ -761,8 +761,8 @@ select:focus,input:focus{border-color:var(--accent);}
       <div id="accessoryAddForm" style="display:none;background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
         <div class="add-title">新しい付属品を追加</div>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-          <div class="form-group"><label>付属品名</label><input type="text" id="newAccName" placeholder="例：アンカーボルト M12"></div>
-          <div class="form-group"><label>メモ（任意）</label><input type="text" id="newAccNote" placeholder="例：規格・数量など"></div>
+          <div class="form-group"><label>品名</label><input type="text" id="newAccName" placeholder="例：アンカーボルト"></div>
+          <div class="form-group"><label>規格</label><input type="text" id="newAccNote" placeholder="例：M12×50mm"></div>
           <div class="form-group"><label>&nbsp;</label>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-primary" onclick="addAccessory()">追加</button>
@@ -1334,7 +1334,7 @@ function editAccessory(id){
     <span style="font-size:18px">📦</span>
     <input type="text" id="acc-edit-name-${id}" value="${a.name.replace(/"/g,'&quot;')}" placeholder="付属品名"
       style="flex:1;padding:5px 8px;border-radius:6px;border:1.5px solid var(--accent);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;">
-    <input type="text" id="acc-edit-note-${id}" value="${(a.note||'').replace(/"/g,'&quot;')}" placeholder="メモ（任意）"
+    <input type="text" id="acc-edit-note-${id}" value="${(a.note||'').replace(/"/g,'&quot;')}" placeholder="規格"
       style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
     <button class="btn btn-primary btn-sm" onclick="saveAccessoryEdit(${id})">保存</button>
     <button class="btn btn-secondary btn-sm" onclick="renderAccessoryList()">キャンセル</button>`;
@@ -1364,7 +1364,7 @@ function renderAccessoryList(){
         <span style="font-size:18px">📦</span>
         <div style="flex:1;">
           <div style="font-weight:600;font-size:14px;">${a.name}</div>
-          ${a.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${a.note}</div>`:''}
+          ${a.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">規格：${a.note}</div>`:''}
         </div>
         <button class="btn btn-secondary btn-sm" onclick="editAccessory(${a.id})">✏️ 編集</button>
         <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteAccessory(${a.id})">削除</button>
