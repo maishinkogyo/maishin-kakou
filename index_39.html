@@ -830,6 +830,7 @@ select:focus,input:focus{border-color:var(--accent);}
             <option value="">全員</option>
           </select>
           <input type="month" id="rptFilterMonth" onchange="renderReportList()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+          <button id="rptPrintBtn" class="btn btn-secondary btn-sm" onclick="printReportPdf()" style="display:none;">🖨️ 日報PDF</button>
           <button class="btn btn-secondary btn-sm" onclick="mergeDuplicateReports()" title="同じ日・同じ人の日報をまとめる">🔗 重複をまとめる</button>
         </div>
       </div>
@@ -3484,6 +3485,9 @@ function renderReportList(){
   const el = document.getElementById('reportList'); if(!el) return;
   const wf = document.getElementById('rptFilterWorker')?.value||'';
   const mf = document.getElementById('rptFilterMonth')?.value||'';
+  // PDF印刷ボタン：人と月が両方選ばれているときだけ表示
+  const printBtn = document.getElementById('rptPrintBtn');
+  if(printBtn) printBtn.style.display = (wf && mf) ? '' : 'none';
   let list = [...reports].sort((a,b)=>b.date.localeCompare(a.date));
   if(wf) list = list.filter(r=>r.worker===wf);
   if(mf) list = list.filter(r=>r.date.startsWith(mf));
@@ -3583,6 +3587,113 @@ async function mergeDuplicateReports(){
   saveLocal();
   renderReportList();
   alert('まとめ完了しました！');
+}
+
+function printReportPdf(){
+  const wf = document.getElementById('rptFilterWorker')?.value||'';
+  const mf = document.getElementById('rptFilterMonth')?.value||'';
+  if(!wf||!mf){ alert('作業員と月を選択してください'); return; }
+
+  const list = [...reports]
+    .filter(r=>r.worker===wf && r.date.startsWith(mf))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const [y,m] = mf.split('-');
+  const DOW = ['日','月','火','水','木','金','土'];
+
+  const totalH = list.reduce((s,r)=>{
+    return s + (r.rows||[]).reduce((ss,rw)=>ss+(rw.hours||0),0);
+  },0);
+  const totalOT = list.reduce((s,r)=>{
+    const ot = r.extraTimes?.overtime;
+    if(ot&&ot.includes('-')){ const[a,b]=ot.split('-'); const[ah,am]=a.split(':').map(Number); const[bh,bm]=b.split(':').map(Number); return s+((bh*60+bm)-(ah*60+am))/60; }
+    return s+(r.overtime||0);
+  },0);
+
+  const rows = list.map(r=>{
+    const d = new Date(r.date+'T00:00:00');
+    const dow = DOW[d.getDay()];
+    const dayStr = `${Number(r.date.slice(5,7))}/${Number(r.date.slice(8,10))}(${dow})`;
+    const isSat = d.getDay()===6, isSun = d.getDay()===0;
+    const dayColor = isSun?'#dc2626':isSat?'#2563eb':'';
+    const rowH = (r.rows||[]).reduce((s,rw)=>s+(rw.hours||0),0);
+    const sites = [...new Set((r.rows||[]).map(rw=>rw.taskName||'').filter(Boolean))];
+    const workTypes = [...new Set((r.rows||[]).flatMap(rw=>rw.workTypes||[]))];
+    const siteStr = (r.rows||[]).map(rw=>{
+      const wt = (rw.workTypes||[]).join('・');
+      return `${rw.taskName||''}${wt?' ［'+wt+'］':''}　${rw.hours}h`;
+    }).join('<br>');
+    // 時間外
+    const fmtR = (key)=>{ const v=r.extraTimes?.[key]; return v&&v.includes('-')?v.replace('-','〜'):''; };
+    const extras = [
+      fmtR('overtime')  ? '残業 '+fmtR('overtime')  : '',
+      fmtR('paidLeave') ? '有給 '+fmtR('paidLeave') : '',
+      fmtR('late')      ? '遅刻 '+fmtR('late')       : '',
+      fmtR('early')     ? '早退 '+fmtR('early')       : '',
+    ].filter(Boolean).join(' ／ ');
+    return `<tr>
+      <td style="text-align:center;white-space:nowrap;color:${dayColor};font-weight:${isSat||isSun?'700':'400'}">${dayStr}</td>
+      <td>${siteStr}</td>
+      <td style="text-align:center;white-space:nowrap;">${rowH?rowH+'h':''}</td>
+      <td style="font-size:10px;color:#555;">${extras}</td>
+      <td style="font-size:10px;color:#555;">${r.memo||''}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `
+    <div id="rptPrintDoc" style="font-family:'Hiragino Sans','Meiryo',sans-serif;padding:10mm;background:#fff;color:#000;font-size:12px;">
+      <div style="text-align:center;margin-bottom:6px;">
+        <div style="font-size:20px;font-weight:900;letter-spacing:4px;border-bottom:3px double #000;padding-bottom:4px;margin-bottom:4px;">作　業　日　報</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;">
+          <span>${y}年${Number(m)}月分</span>
+          <span>作業員：<strong style="font-size:14px;">${wf}</strong></span>
+          <span>マイシン工業</span>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:11px;">
+        <thead>
+          <tr style="background:#1e3a5f;color:#fff;">
+            <th style="border:1px solid #888;padding:5px 8px;white-space:nowrap;">日付</th>
+            <th style="border:1px solid #888;padding:5px 8px;">現場 / 作業内容</th>
+            <th style="border:1px solid #888;padding:5px 8px;white-space:nowrap;">時間</th>
+            <th style="border:1px solid #888;padding:5px 8px;">時間外</th>
+            <th style="border:1px solid #888;padding:5px 8px;">メモ</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr style="background:#f0f4f8;font-weight:700;">
+            <td colspan="2" style="border:1px solid #888;padding:5px 8px;text-align:right;">合　計</td>
+            <td style="border:1px solid #888;padding:5px 8px;text-align:center;">${totalH}h</td>
+            <td colspan="2" style="border:1px solid #888;padding:5px 8px;font-size:10px;">残業合計 ${Math.round(totalOT*10)/10}h</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div style="margin-top:16px;display:flex;gap:24px;justify-content:flex-end;">
+        <div style="border:1px solid #999;width:80px;text-align:center;padding:4px;font-size:10px;">確認印<div style="height:32px;"></div></div>
+        <div style="border:1px solid #999;width:80px;text-align:center;padding:4px;font-size:10px;">責任者<div style="height:32px;"></div></div>
+      </div>
+    </div>`;
+
+  // 印刷用オーバーレイ作成
+  let wrap = document.getElementById('rptPrintWrap');
+  if(!wrap){ wrap=document.createElement('div'); wrap.id='rptPrintWrap'; document.body.appendChild(wrap); }
+  wrap.innerHTML = html;
+
+  let ps = document.getElementById('commonPrintStyle');
+  if(!ps){ ps=document.createElement('style'); ps.id='commonPrintStyle'; document.head.appendChild(ps); }
+  ps.textContent=`@media print{
+    @page{size:A4 portrait;margin:0;}
+    body *{visibility:hidden!important;}
+    #rptPrintWrap,#rptPrintWrap *{visibility:visible!important;}
+    #rptPrintWrap{position:fixed!important;inset:0!important;overflow:visible!important;background:#fff!important;z-index:99999;}
+    table tr:nth-child(even){background:#f8fafc;}
+    table td,table th{border:1px solid #999!important;padding:4px 6px!important;}
+  }`;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ ps.textContent=''; wrap.innerHTML=''; },1500);
+  },300);
 }
 
 async function deleteReport(id, e){
