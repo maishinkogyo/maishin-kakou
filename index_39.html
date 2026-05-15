@@ -2726,9 +2726,17 @@ async function loadData(){
       buyers = _cache.buyers; nextBuyerId = buyers.length ? Math.max(...buyers.map(b=>b.id))+1 : 1;
       console.warn('buyers DB失敗、キャッシュ使用:', e8.message);
     }
-    if(dbAccs && !e9) {
+    if(dbAccs && !e9 && dbAccs.length > 0) {
       accessories = dbAccs.map(r=>({id:r.id, name:r.name, note:r.note||''}));
       nextAccId = accessories.length ? Math.max(...accessories.map(a=>a.id))+1 : 1;
+    } else if(!e9 && dbAccs && dbAccs.length === 0 && _cache.accessories && _cache.accessories.length > 0) {
+      // DBが空だがキャッシュにデータあり→キャッシュを使いDBに再同期
+      accessories = _cache.accessories;
+      nextAccId = accessories.length ? Math.max(...accessories.map(a=>a.id))+1 : 1;
+      console.warn('accessories DBが空のためキャッシュから復元、再同期します');
+      for(const a of accessories){
+        try{ await sb.from('accessories').upsert({id:a.id, name:a.name, note:a.note||null}); }catch{}
+      }
     } else if(e9 && _cache.accessories) {
       accessories = _cache.accessories; nextAccId = accessories.length ? Math.max(...accessories.map(a=>a.id))+1 : 1;
       console.warn('accessories DB失敗、キャッシュ使用:', e9.message);
