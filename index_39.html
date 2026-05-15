@@ -1363,8 +1363,10 @@ function renderAccessoryList(){
       <div id="acc-item-${a.id}" style="padding:12px 14px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:18px">📦</span>
         <div style="flex:1;">
-          <div style="font-weight:600;font-size:14px;">${a.name}</div>
-          ${a.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">規格：${a.note}</div>`:''}
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <div style="font-weight:600;font-size:14px;">${a.name}</div>
+            ${a.note?`<div style="font-size:12px;color:var(--text-muted);">${a.note}</div>`:''}
+          </div>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="editAccessory(${a.id})">✏️ 編集</button>
         <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteAccessory(${a.id})">削除</button>
