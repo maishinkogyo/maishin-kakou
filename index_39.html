@@ -1696,17 +1696,15 @@ function taskDetailHTML(t){
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">進捗 ${tPct}%</div>
         </div>
-        <div class="transport-input-row" style="margin-bottom:8px;">
-          <select id="tveh-selected-${t.id}" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+        <div class="transport-input-row">
+          <select id="tveh-selected-${t.id}" style="flex:1.5;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
             ${vehicles.length
               ? vehicles.map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}">${v.name}</option>`).join('')
               : '<option value="">車両未登録</option>'
             }
           </select>
-        </div>
-        <div class="transport-input-row">
-          <input type="date" id="tlog-date-${t.id}" value="${todayStr}">
-          <input type="number" id="tlog-amt-${t.id}" placeholder="kg数" min="0.1" step="0.1">
+          <input type="date" id="tlog-date-${t.id}" value="${todayStr}" style="flex:1;">
+          <input type="number" id="tlog-amt-${t.id}" placeholder="kg数" min="0.1" step="0.1" style="flex:1;">
           <button class="btn btn-primary btn-sm" onclick="addTransportLog(${t.id})">＋ 追加</button>
         </div>
         ${(t.transportLog&&t.transportLog.length)
