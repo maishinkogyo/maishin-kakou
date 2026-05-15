@@ -785,6 +785,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="report-subtabs">
       <div class="report-subtab active" onclick="switchReportTab('input')" id="rsubtab-input">📝 入力・一覧</div>
       <div class="report-subtab" onclick="switchReportTab('summary')" id="rsubtab-summary">📈 集計</div>
+      <div class="report-subtab" onclick="switchReportTab('transport')" id="rsubtab-transport">🚛 運搬集計</div>
       <div class="report-subtab" onclick="switchReportTab('timeline')" id="rsubtab-timeline">📅 タイムスケジュール</div>
     </div>
 
@@ -856,6 +857,24 @@ select:focus,input:focus{border-color:var(--accent);}
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rsumMonth').value='';renderReportSummary()">クリア</button>
       </div>
       <div id="reportSummaryContent"></div>
+    </div>
+
+    <!-- 運搬集計パネル -->
+    <div id="rpanel-transport" style="display:none">
+      <div class="rsum-filter">
+        <div class="form-group" style="margin:0">
+          <label>月</label>
+          <input type="month" id="transMonth" onchange="renderTransportSummary()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>作業者</label>
+          <select id="transWorker" onchange="renderTransportSummary()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+            <option value="">全員</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('transMonth').value='';document.getElementById('transWorker').value='';renderTransportSummary()">クリア</button>
+      </div>
+      <div id="transportSummaryContent"></div>
     </div>
 
     <!-- タイムスケジュールパネル -->
@@ -3289,9 +3308,10 @@ function editReport(id, e){
 
 // ── 日報サブタブ ──
 function switchReportTab(tab){
-  document.getElementById('rpanel-input').style.display   = tab==='input'?'':'none';
-  document.getElementById('rpanel-summary').style.display = tab==='summary'?'':'none';
-  document.getElementById('rpanel-timeline').style.display = tab==='timeline'?'':'none';
+  document.getElementById('rpanel-input').style.display     = tab==='input'?'':'none';
+  document.getElementById('rpanel-summary').style.display   = tab==='summary'?'':'none';
+  document.getElementById('rpanel-transport').style.display = tab==='transport'?'':'none';
+  document.getElementById('rpanel-timeline').style.display  = tab==='timeline'?'':'none';
   document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
   document.getElementById('rsubtab-'+tab).classList.add('active');
   if(tab==='summary'){
@@ -3300,6 +3320,17 @@ function switchReportTab(tab){
     }
     renderReportSummary();
   }
+  if(tab==='transport'){
+    if(!document.getElementById('transMonth').value){
+      document.getElementById('transMonth').value = new Date().toISOString().slice(0,7);
+    }
+    // 作業者セレクト更新
+    const sel = document.getElementById('transWorker');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全員</option>' + workers.map(w=>`<option value="${w}">${w}</option>`).join('');
+    if(cur) sel.value = cur;
+    renderTransportSummary();
+  }
   if(tab==='timeline'){
     if(!document.getElementById('tlDate').value){
       document.getElementById('tlDate').value = document.getElementById('rptDate').value || new Date().toISOString().slice(0,10);
@@ -3307,6 +3338,82 @@ function switchReportTab(tab){
     refreshTlWorkerSelect();
     renderTimeline();
   }
+}
+
+// ── 運搬集計 ──
+function renderTransportSummary(){
+  const el = document.getElementById('transportSummaryContent'); if(!el) return;
+  const mf = document.getElementById('transMonth').value;
+  const wf = document.getElementById('transWorker').value;
+
+  // うんぱんを含む行だけ抽出
+  let rows = [];
+  reports.forEach(r=>{
+    if(mf && !r.date.startsWith(mf)) return;
+    if(wf && r.worker !== wf) return;
+    r.rows.forEach(rw=>{
+      if(!(rw.workTypes||[]).includes('うんぱん')) return;
+      const taskObj = rw.taskId ? tasks.find(t=>t.id===rw.taskId) : null;
+      const rawName = rw.taskName||'—';
+      const site = taskObj ? getTaskNames(taskObj).main : (rawName.includes(' ／ ') ? rawName.split(' ／ ')[0] : rawName);
+      rows.push({date:r.date, worker:r.worker, site, hours:rw.hours||0});
+    });
+  });
+
+  if(!rows.length){
+    el.innerHTML='<div style="color:var(--text-muted);padding:20px 0;text-align:center;">運搬の記録がありません</div>';
+    return;
+  }
+
+  // 日付昇順ソート
+  rows.sort((a,b)=>a.date.localeCompare(b.date)||a.worker.localeCompare(b.worker));
+
+  // サマリー：現場別合計
+  const siteTotal = {};
+  rows.forEach(r=>{ siteTotal[r.site]=(siteTotal[r.site]||0)+r.hours; });
+  const summaryChips = Object.entries(siteTotal).sort((a,b)=>b[1]-a[1]).map(([site,h])=>
+    `<span style="font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;white-space:nowrap;">
+      <span style="font-weight:600;">${site}</span>
+      <span style="font-family:'DM Mono',monospace;color:var(--accent);margin-left:6px;">${h}h</span>
+    </span>`
+  ).join('');
+
+  // 明細テーブル
+  const tableRows = rows.map(r=>{
+    const d = new Date(r.date+'T00:00:00');
+    const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+    const isRed = isRedDay(r.date)||d.getDay()===0;
+    const isSat = d.getDay()===6;
+    const dateStr = `${r.date.slice(5).replace('-','/')}（${dow}）`;
+    return`<tr>
+      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:13px;white-space:nowrap;${isRed?'color:var(--danger);':isSat?'color:var(--accent);':''}">${dateStr}</td>
+      <td style="padding:6px 10px;font-size:13px;font-weight:600;color:var(--accent);">${r.worker}</td>
+      <td style="padding:6px 10px;font-size:13px;">${r.site}</td>
+      <td style="padding:6px 10px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;">${r.hours>0?r.hours+'h':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="rsum-section" style="margin-bottom:12px;">
+      <div class="rsum-section-title">🚛 運搬先別　合計時間</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">${summaryChips}</div>
+    </div>
+    <div class="rsum-section">
+      <div class="rsum-section-title">📋 運搬明細　（${rows.length}件）</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:var(--surface2);">
+              <th style="padding:6px 10px;text-align:left;font-size:12px;white-space:nowrap;border-bottom:2px solid var(--border);">日付</th>
+              <th style="padding:6px 10px;text-align:left;font-size:12px;border-bottom:2px solid var(--border);">作業者</th>
+              <th style="padding:6px 10px;text-align:left;font-size:12px;border-bottom:2px solid var(--border);">運搬先</th>
+              <th style="padding:6px 10px;text-align:center;font-size:12px;border-bottom:2px solid var(--border);">時間</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ── タイムスケジュール ──
