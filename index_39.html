@@ -4339,7 +4339,7 @@ function buildSiteTable(list, days, filterWorker=''){
         return`<td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;padding:3px 2px;border-top:1px dashed var(--border);color:${v>0?'var(--text)':''};">${v>0?v:''}</td>`;
       }).join('');
       return`<tr class="${detailId}" style="display:none;background:var(--surface2);">
-        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);border-top:1px dashed var(--border);">🔧 ${wt}</td>
+        <td style="font-size:11px;padding:3px 10px 3px 22px;color:var(--text-muted);white-space:nowrap;border-right:2px solid var(--border);border-top:1px dashed var(--border);">${wt}</td>
         ${wCells}
         <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:2px solid var(--border);border-top:1px dashed var(--border);">${wTotal}</td>
         <td style="text-align:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:3px 6px;border-left:1px solid var(--border);border-top:1px dashed var(--border);">${(wTotal/7).toFixed(1)}</td>
