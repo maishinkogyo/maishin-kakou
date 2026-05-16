@@ -767,7 +767,7 @@ select:focus,input:focus{border-color:var(--accent);}
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
           <input type="text" id="newAccSpecInput" placeholder="規格を入力（例：M12）"
             style="flex:1;max-width:260px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;"
-            onkeydown="if(event.key==='Enter'){addAccSpecChip();event.preventDefault();}">
+            onkeydown="if(event.key==='Enter'&&!event.isComposing){addAccSpecChip();event.preventDefault();}">
           <button class="btn btn-secondary btn-sm" onclick="addAccSpecChip()">＋ 規格追加</button>
         </div>
         <div id="newAccSpecs" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;margin-bottom:12px;"></div>
@@ -1373,7 +1373,7 @@ function editAccessory(id){
       <div style="display:flex;gap:6px;margin-bottom:8px;">
         <input type="text" id="acc-edit-spec-inp-${id}" placeholder="規格を追加"
           style="flex:1;max-width:240px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;"
-          onkeydown="if(event.key==='Enter'){addEditAccSpec(${id});event.preventDefault();}">
+          onkeydown="if(event.key==='Enter'&&!event.isComposing){addEditAccSpec(${id});event.preventDefault();}">
         <button class="btn btn-secondary btn-sm" onclick="addEditAccSpec(${id})">＋ 追加</button>
       </div>
       <div id="acc-edit-specs-${id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
