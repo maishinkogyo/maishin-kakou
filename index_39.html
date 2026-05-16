@@ -760,15 +760,20 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
       <div id="accessoryAddForm" style="display:none;background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
         <div class="add-title">新しい付属品を追加</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-          <div class="form-group"><label>品名</label><input type="text" id="newAccName" placeholder="例：アンカーボルト"></div>
-          <div class="form-group"><label>規格</label><input type="text" id="newAccNote" placeholder="例：M12×50mm"></div>
-          <div class="form-group"><label>&nbsp;</label>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-primary" onclick="addAccessory()">追加</button>
-              <button class="btn btn-secondary" onclick="hideAddAccessory()">キャンセル</button>
-            </div>
-          </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>品名</label>
+          <input type="text" id="newAccName" placeholder="例：アンカーボルト" style="width:100%;max-width:320px;">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+          <input type="text" id="newAccSpecInput" placeholder="規格を入力（例：M12）"
+            style="flex:1;max-width:260px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;"
+            onkeydown="if(event.key==='Enter'){addAccSpecChip();event.preventDefault();}">
+          <button class="btn btn-secondary btn-sm" onclick="addAccSpecChip()">＋ 規格追加</button>
+        </div>
+        <div id="newAccSpecs" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-primary" onclick="addAccessory()">登録</button>
+          <button class="btn btn-secondary" onclick="hideAddAccessory()">キャンセル</button>
         </div>
       </div>
       <div id="accessoryList"></div>
@@ -1300,17 +1305,44 @@ function renderMaterialList(){
 
 
 // ── 付属品リスト ──
+let _newAccSpecs = [];
+let _editAccSpecs = {};
+
+function accParseSpecs(note){
+  if(!note) return [];
+  try{ const p=JSON.parse(note); return Array.isArray(p)?p:[note]; }catch{ return [note]; }
+}
+
 function showAddAccessory(){ document.getElementById('accessoryAddForm').style.display='block'; }
 function hideAddAccessory(){
   document.getElementById('accessoryAddForm').style.display='none';
   document.getElementById('newAccName').value='';
-  document.getElementById('newAccNote').value='';
+  document.getElementById('newAccSpecInput').value='';
+  _newAccSpecs=[];
+  renderNewAccSpecs();
 }
+function addAccSpecChip(){
+  const inp=document.getElementById('newAccSpecInput');
+  const v=inp.value.trim(); if(!v) return;
+  if(!_newAccSpecs.includes(v)) _newAccSpecs.push(v);
+  inp.value=''; inp.focus();
+  renderNewAccSpecs();
+}
+function removeNewAccSpec(i){ _newAccSpecs.splice(i,1); renderNewAccSpecs(); }
+function renderNewAccSpecs(){
+  const el=document.getElementById('newAccSpecs'); if(!el) return;
+  el.innerHTML=_newAccSpecs.map((s,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(37,99,235,.1);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:13px;font-weight:600;">
+      ${s}<button onclick="removeNewAccSpec(${i})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:14px;padding:0;line-height:1;">×</button>
+    </span>`
+  ).join('');
+}
+
 async function addAccessory(){
-  const name = document.getElementById('newAccName').value.trim();
-  if(!name){ alert('付属品名を入力してください'); return; }
+  const name=document.getElementById('newAccName').value.trim();
+  if(!name){ alert('品名を入力してください'); return; }
   if(accessories.some(a=>a.name===name)){ alert('同じ名前の付属品がすでにあります'); return; }
-  const acc = {id:nextAccId++, name, note: document.getElementById('newAccNote').value.trim()};
+  const acc={id:nextAccId++, name, note:JSON.stringify(_newAccSpecs)};
   accessories.push(acc);
   hideAddAccessory();
   renderAccessoryList();
@@ -1319,60 +1351,91 @@ async function addAccessory(){
   saveLocal();
 }
 async function deleteAccessory(id){
-  const a = accessories.find(a=>a.id===id);
-  if(!a) return;
+  const a=accessories.find(a=>a.id===id); if(!a) return;
   if(!confirm(`「${a.name}」を削除しますか？`)) return;
-  accessories = accessories.filter(x=>x.id!==id);
+  accessories=accessories.filter(x=>x.id!==id);
   renderAccessoryList();
   try{ await sb.from('accessories').delete().eq('id',id); flashSaved(); }
   catch(e){ console.error('付属品削除失敗:',e); }
   saveLocal();
 }
 function editAccessory(id){
-  const a=accessories.find(a=>a.id===id); if(!a)return;
-  const el=document.getElementById(`acc-item-${id}`); if(!el)return;
+  const a=accessories.find(a=>a.id===id); if(!a) return;
+  const el=document.getElementById(`acc-item-${id}`); if(!el) return;
+  _editAccSpecs[id]=accParseSpecs(a.note).slice();
   el.innerHTML=`
-    <span style="font-size:18px">📦</span>
-    <input type="text" id="acc-edit-name-${id}" value="${a.name.replace(/"/g,'&quot;')}" placeholder="付属品名"
-      style="flex:1;padding:5px 8px;border-radius:6px;border:1.5px solid var(--accent);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;">
-    <input type="text" id="acc-edit-note-${id}" value="${(a.note||'').replace(/"/g,'&quot;')}" placeholder="規格"
-      style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
-    <button class="btn btn-primary btn-sm" onclick="saveAccessoryEdit(${id})">保存</button>
-    <button class="btn btn-secondary btn-sm" onclick="renderAccessoryList()">キャンセル</button>`;
+    <div style="width:100%;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:18px">📦</span>
+        <input type="text" id="acc-edit-name-${id}" value="${a.name.replace(/"/g,'&quot;')}" placeholder="品名"
+          style="flex:1;padding:5px 10px;border-radius:6px;border:1.5px solid var(--accent);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;">
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="text" id="acc-edit-spec-inp-${id}" placeholder="規格を追加"
+          style="flex:1;max-width:240px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;"
+          onkeydown="if(event.key==='Enter'){addEditAccSpec(${id});event.preventDefault();}">
+        <button class="btn btn-secondary btn-sm" onclick="addEditAccSpec(${id})">＋ 追加</button>
+      </div>
+      <div id="acc-edit-specs-${id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="saveAccessoryEdit(${id})">保存</button>
+        <button class="btn btn-secondary btn-sm" onclick="renderAccessoryList()">キャンセル</button>
+      </div>
+    </div>`;
+  renderEditAccSpecs(id);
   document.getElementById(`acc-edit-name-${id}`).focus();
 }
+function addEditAccSpec(id){
+  const inp=document.getElementById(`acc-edit-spec-inp-${id}`);
+  const v=inp.value.trim(); if(!v) return;
+  if(!_editAccSpecs[id]) _editAccSpecs[id]=[];
+  if(!_editAccSpecs[id].includes(v)) _editAccSpecs[id].push(v);
+  inp.value=''; inp.focus();
+  renderEditAccSpecs(id);
+}
+function removeEditAccSpec(id,i){ _editAccSpecs[id].splice(i,1); renderEditAccSpecs(id); }
+function renderEditAccSpecs(id){
+  const el=document.getElementById(`acc-edit-specs-${id}`); if(!el) return;
+  el.innerHTML=(_editAccSpecs[id]||[]).map((s,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(37,99,235,.1);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:13px;font-weight:600;">
+      ${s}<button onclick="removeEditAccSpec(${id},${i})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:14px;padding:0;line-height:1;">×</button>
+    </span>`
+  ).join('');
+}
 async function saveAccessoryEdit(id){
-  const a=accessories.find(a=>a.id===id); if(!a)return;
+  const a=accessories.find(a=>a.id===id); if(!a) return;
   const newName=document.getElementById(`acc-edit-name-${id}`).value.trim();
-  const newNote=document.getElementById(`acc-edit-note-${id}`).value.trim();
-  if(!newName){alert('付属品名を入力してください');return;}
-  if(accessories.some(x=>x.id!==id&&x.name===newName)){alert('同じ名前の付属品がすでにあります');return;}
-  a.name=newName; a.note=newNote;
+  if(!newName){ alert('品名を入力してください'); return; }
+  if(accessories.some(x=>x.id!==id&&x.name===newName)){ alert('同じ名前の付属品がすでにあります'); return; }
+  a.name=newName; a.note=JSON.stringify(_editAccSpecs[id]||[]);
   renderAccessoryList();
-  try{await sb.from('accessories').upsert({id:a.id,name:a.name,note:a.note||null});flashSaved();}
-  catch(e){console.error('付属品更新失敗:',e);}
+  try{ await sb.from('accessories').upsert({id:a.id,name:a.name,note:a.note||null}); flashSaved(); }
+  catch(e){ console.error('付属品更新失敗:',e); }
   saveLocal();
 }
 function renderAccessoryList(){
-  const el=document.getElementById('accessoryList'); if(!el)return;
+  const el=document.getElementById('accessoryList'); if(!el) return;
   if(!accessories.length){
     el.innerHTML='<div style="color:var(--text-muted);padding:20px 0;text-align:center;">付属品がまだ登録されていません</div>';
     return;
   }
-  el.innerHTML=accessories.map(a=>`
-    <div class="task-card" style="margin-bottom:8px;">
+  el.innerHTML=accessories.map(a=>{
+    const specs=accParseSpecs(a.note);
+    const chips=specs.map(s=>
+      `<span style="background:rgba(37,99,235,.1);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:14px;font-weight:600;">${s}</span>`
+    ).join('');
+    return`<div class="task-card" style="margin-bottom:8px;">
       <div id="acc-item-${a.id}" style="padding:12px 14px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:18px">📦</span>
         <div style="flex:1;">
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-weight:600;font-size:14px;">${a.name}</div>
-            ${a.note?`<div style="font-size:16px;font-weight:600;color:var(--accent);">${a.note}</div>`:''}
-          </div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:${specs.length?'6px':'0'};">${a.name}</div>
+          ${specs.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;">${chips}</div>`:''}
         </div>
         <button class="btn btn-secondary btn-sm" onclick="editAccessory(${a.id})">✏️ 編集</button>
         <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="deleteAccessory(${a.id})">削除</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 
