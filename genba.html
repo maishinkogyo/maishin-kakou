@@ -192,12 +192,16 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- 人員配置 -->
       <div class="page" id="page-assign">
         <div class="page-title">人員配置</div>
-        <div class="page-desc">工事ごとに作業員をクリックで配置・解除できます</div>
-        <div class="toolbar">
-          <input type="date" id="assignDate" class="btn btn-secondary" style="font-weight:500" onchange="renderAssign()">
+        <div class="toolbar" style="justify-content:space-between;align-items:center">
+          <button class="btn btn-secondary btn-sm" onclick="weekOffset--;renderAssign()">← 前週</button>
+          <span id="assignWeekLabel" style="font-weight:700;font-size:14px"></span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="weekOffset=0;renderAssign()">今週</button>
+            <button class="btn btn-secondary btn-sm" onclick="weekOffset++;renderAssign()">次週 →</button>
+          </div>
         </div>
-        <div id="assignBanner"></div>
-        <div id="assignBoard"></div>
+        <div id="assignBanner" style="margin-top:8px"></div>
+        <div id="assignBoard" style="overflow-x:auto"></div>
       </div>
 
       <!-- 原価管理 -->
@@ -248,6 +252,17 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 </div>
 
 <!-- 現場詳細モーダル -->
+<!-- 人員配置セルモーダル -->
+<div class="modal-overlay" id="cellAssignModal">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-title" id="cellAssignTitle"></div>
+    <div id="cellAssignWorkers" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('cellAssignModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="siteDetailModal" style="z-index:600">
   <div class="modal" style="max-width:640px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
@@ -417,7 +432,7 @@ function changePw(){
 // ── Init ──
 async function initApp(){
   showLoading();
-  document.getElementById('assignDate').value=todayStr();
+  weekOffset=0;
   try{
     const[t,fw,asg,wr,c]=await Promise.all([
       sb.from('genba_tasks').select('*').order('num'),
@@ -823,64 +838,135 @@ async function deleteWorklog(id){
   flash();renderWorklog();renderSites();
 }
 
-// ── 人員配置 ──
+// ── 人員配置（週間グリッド） ──
+let weekOffset=0;
+const DAY_NAMES=['月','火','水','木','金','土','日'];
+
+function getWeekDates(){
+  const today=new Date();
+  const dow=today.getDay(); // 0=日
+  const diff=dow===0?-6:1-dow; // 月曜へ
+  const mon=new Date(today);
+  mon.setDate(today.getDate()+diff+weekOffset*7);
+  mon.setHours(0,0,0,0);
+  return Array.from({length:7},(_,i)=>{
+    const d=new Date(mon);d.setDate(mon.getDate()+i);return d;
+  });
+}
+
 function renderAssign(){
-  const date=document.getElementById('assignDate').value;
+  const dates=getWeekDates();
+  const strs=dates.map(d=>d.toISOString().slice(0,10));
+  const td=todayStr();
   const el=document.getElementById('assignBoard');
   const bannerEl=document.getElementById('assignBanner');
   const active=tasks.filter(t=>!t.complete);
 
-  if(!fieldWorkers.length){
-    bannerEl.innerHTML='';
-    el.innerHTML='<div class="empty"><div class="empty-icon">👷</div>先に設定から作業員を登録してください</div>';
-    return;
-  }
-  if(!active.length){
-    bannerEl.innerHTML='';
-    el.innerHTML='<div class="empty"><div class="empty-icon">🏗️</div>進行中の現場がありません</div>';
-    return;
-  }
+  // 週ラベル
+  const s=dates[0],e=dates[6];
+  document.getElementById('assignWeekLabel').textContent=
+    `${s.getMonth()+1}/${s.getDate()} ～ ${e.getMonth()+1}/${e.getDate()}`;
 
-  // 当日いずれかの工事に配置済みの作業員ID
-  const assignedIds=new Set(assignments.filter(a=>a.date===date).map(a=>a.worker_id));
-  const unassigned=fieldWorkers.filter(w=>!assignedIds.has(w.id));
+  if(!fieldWorkers.length){bannerEl.innerHTML='';el.innerHTML='<div class="empty"><div class="empty-icon">👷</div>先に設定から作業員を登録してください</div>';return;}
+  if(!active.length){bannerEl.innerHTML='';el.innerHTML='<div class="empty"><div class="empty-icon">🏗️</div>進行中の現場がありません</div>';return;}
 
-  // 未配置バナー
-  if(unassigned.length){
-    bannerEl.innerHTML=`<div class="assign-banner" style="background:#fef3c7;border:1px solid #fcd34d;">
-      <span style="font-size:18px">⚠️</span>
-      <div>
-        <div style="font-weight:700;color:#d97706;font-size:13px">未配置 ${unassigned.length}名</div>
-        <div style="font-size:12px;color:#92400e;margin-top:2px">${unassigned.map(w=>w.name).join('　')}</div>
-      </div>
-    </div>`;
-  }else{
-    bannerEl.innerHTML=`<div class="assign-banner" style="background:#dcfce7;border:1px solid #86efac;">
-      <span style="font-size:18px">✅</span>
-      <div style="font-weight:700;color:#16a34a;font-size:13px">全員配置済み</div>
-    </div>`;
-  }
+  // 今日の未配置バナー
+  const todayAssigned=new Set(assignments.filter(a=>a.date===td).map(a=>a.worker_id));
+  const todayUnassigned=fieldWorkers.filter(w=>!todayAssigned.has(w.id));
+  bannerEl.innerHTML=todayUnassigned.length
+    ?`<div class="assign-banner" style="background:#fef3c7;border:1px solid #fcd34d;"><span style="font-size:16px">⚠️</span><div><div style="font-weight:700;color:#d97706;font-size:12px">今日 未配置 ${todayUnassigned.length}名</div><div style="font-size:11px;color:#92400e">${todayUnassigned.map(w=>w.name).join('　')}</div></div></div>`
+    :`<div class="assign-banner" style="background:#dcfce7;border:1px solid #86efac;"><span style="font-size:16px">✅</span><div style="font-weight:700;color:#16a34a;font-size:12px">今日 全員配置済み</div></div>`;
 
-  // 工事別カード
-  el.innerHTML=active.map(t=>{
-    const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===date);
-    const chips=fieldWorkers.map(w=>{
-      const asg=asgList.find(a=>a.worker_id===w.id);
-      return asg
-        ?`<span class="worker-toggle assigned" onclick="toggleAssign(${t.id},${w.id},'${date}',${asg.id})">${w.name} ×</span>`
-        :`<span class="worker-toggle unassigned" onclick="toggleAssign(${t.id},${w.id},'${date}',null)">${w.name} ＋</span>`;
+  // ヘッダー行
+  const headerCols=dates.map((d,i)=>{
+    const ds=strs[i];
+    const isToday=ds===td;
+    const isSat=i===5,isSun=i===6;
+    const color=isToday?'#fff':isSun?'#dc2626':isSat?'#2563eb':'var(--text)';
+    const bg=isToday?'var(--accent)':isSat?'#eff6ff':isSun?'#fff1f2':'var(--surface2)';
+    return`<th style="background:${bg};color:${color};font-size:12px;font-weight:700;padding:6px 4px;text-align:center;min-width:72px;border:1px solid var(--border)">
+      ${d.getMonth()+1}/${d.getDate()}<br>(${DAY_NAMES[i]})
+    </th>`;
+  }).join('');
+
+  // 現場行
+  const siteRows=active.map(t=>{
+    const cells=strs.map((ds,i)=>{
+      const isSat=i===5,isSun=i===6;
+      const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
+      const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===ds);
+      const chips=asgList.map(a=>{
+        const w=fieldWorkers.find(x=>x.id===a.worker_id);
+        return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
+      }).join('');
+      return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
+        ${chips}
+        <div style="text-align:right;font-size:10px;color:${asgList.length?'#2563eb':'var(--border)'};margin-top:2px">${asgList.length?asgList.length+'名':''}</div>
+      </td>`;
     }).join('');
-    return`<div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-weight:700">${t.nameMain}</div>
-          ${t.nameSub?`<div style="font-size:12px;color:var(--text-muted)">${t.nameSub}</div>`:''}
-        </div>
-        <span class="badge ${asgList.length?'blue':''}">${asgList.length}名</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap">${chips}</div>
+    return`<tr>
+      <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:var(--surface2);white-space:nowrap;min-width:70px;vertical-align:middle">
+        ${t.nameMain}${t.nameSub?`<div style="font-weight:400;color:var(--text-muted);font-size:10px">${t.nameSub}</div>`:''}
+      </td>${cells}
+    </tr>`;
+  }).join('');
+
+  // 未配置行
+  const unassignedCells=strs.map((ds,i)=>{
+    const isSat=i===5,isSun=i===6;
+    const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
+    const assignedIds=new Set(assignments.filter(a=>a.date===ds).map(a=>a.worker_id));
+    const uws=fieldWorkers.filter(w=>!assignedIds.has(w.id));
+    return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border)">
+      ${uws.map(w=>`<span style="display:inline-block;background:#fee2e2;color:#dc2626;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${w.name}</span>`).join('')}
+      <div style="text-align:right;font-size:10px;color:${uws.length?'#dc2626':'var(--border)'};margin-top:2px">${uws.length?uws.length+'名':''}</div>
+    </td>`;
+  }).join('');
+
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr>
+        <th style="background:var(--surface2);padding:6px 8px;border:1px solid var(--border);font-size:11px;min-width:70px"></th>
+        ${headerCols}
+      </tr>
+    </thead>
+    <tbody>
+      ${siteRows}
+      <tr>
+        <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:#fff5f5;color:#dc2626;white-space:nowrap;vertical-align:middle">未配置</td>
+        ${unassignedCells}
+      </tr>
+    </tbody>
+  </table>`;
+}
+
+let cellAssignTid=null,cellAssignDate=null;
+function openCellAssign(tid,date,ev){
+  if(ev)ev.stopPropagation();
+  cellAssignTid=tid;cellAssignDate=date;
+  const t=tasks.find(x=>x.id===tid);
+  const d=new Date(date);
+  const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
+  document.getElementById('cellAssignTitle').textContent=`${t.nameMain}　${d.getMonth()+1}/${d.getDate()}(${dow})`;
+  renderCellAssignWorkers();
+  openModal('cellAssignModal');
+}
+function renderCellAssignWorkers(){
+  const asgList=assignments.filter(a=>a.task_id===cellAssignTid&&a.date===cellAssignDate);
+  document.getElementById('cellAssignWorkers').innerHTML=fieldWorkers.map(w=>{
+    const asg=asgList.find(a=>a.worker_id===w.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${asg?'#dbeafe':'var(--bg)'};border:1px solid ${asg?'#93c5fd':'var(--border)'}">
+      <span style="font-weight:${asg?700:400}">${w.name}</span>
+      <button class="btn btn-sm" style="background:${asg?'#ef4444':'var(--accent)'};color:#fff;padding:3px 12px" onclick="toggleAssignCell(${w.id})">
+        ${asg?'解除':'配置'}
+      </button>
     </div>`;
   }).join('');
+}
+async function toggleAssignCell(wid){
+  const asg=assignments.find(a=>a.task_id===cellAssignTid&&a.date===cellAssignDate&&a.worker_id===wid);
+  await toggleAssign(cellAssignTid,wid,cellAssignDate,asg?asg.id:null);
+  renderCellAssignWorkers();
 }
 
 async function toggleAssign(tid,wid,date,asgId){
