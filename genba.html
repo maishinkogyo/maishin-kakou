@@ -150,7 +150,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       </div>
       <div class="sidebar-nav">
         <button class="nav-btn active" onclick="showPage('sites')" id="nav-sites"><span>🏗️</span> 現場一覧</button>
-        <button class="nav-btn" onclick="showPage('worklog')" id="nav-worklog"><span>📝</span> 作業記録</button>
+        <button class="nav-btn" onclick="showPage('worklog')" id="nav-worklog"><span>📝</span> 作業日報</button>
         <button class="nav-btn" onclick="showPage('assign')" id="nav-assign"><span>👷</span> 人員配置</button>
         <button class="nav-btn" onclick="showPage('costs')" id="nav-costs"><span>💰</span> 原価管理</button>
         <button class="nav-btn" onclick="showPage('settings')" id="nav-settings"><span>⚙️</span> 設定</button>
@@ -178,9 +178,9 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         <div id="siteList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;align-items:start"></div>
       </div>
 
-      <!-- 作業記録 -->
+      <!-- 作業日報 -->
       <div class="page" id="page-worklog">
-        <div class="page-title">作業記録</div>
+        <div class="page-title">作業日報</div>
         <div class="page-desc">現場ごとの日々の作業内容と進捗</div>
         <div class="toolbar">
           <div class="form-group" style="min-width:220px;margin:0">
@@ -380,10 +380,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
   </div>
 </div>
 
-<!-- 作業記録モーダル -->
+<!-- 作業日報モーダル -->
 <div class="modal-overlay" id="worklogModal">
   <div class="modal">
-    <div class="modal-title" id="wlModalTitle">作業記録を追加</div>
+    <div class="modal-title" id="wlModalTitle">作業日報を追加</div>
     <div class="form-row">
       <div class="form-group" style="max-width:180px"><label>日付</label><input type="date" id="wlDate"></div>
       <div class="form-group" style="max-width:120px"><label>進捗（%）</label><input type="number" id="wlProgress" min="0" max="100" value="0"></div>
@@ -763,7 +763,7 @@ async function toggleSiteCompleteFromEdit(){
   btn.style.background=t.complete?'#6b7280':'var(--accent)';
 }
 async function deleteSiteFromEdit(){
-  if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
+  if(!confirm('この現場を削除しますか？\n関連する作業日報・原価も削除されます。'))return;
   await sb.from('genba_tasks').delete().eq('id',editingSiteId);
   tasks=tasks.filter(x=>x.id!==editingSiteId);
   closeModal('siteModal');
@@ -778,7 +778,7 @@ async function toggleSiteComplete(id){
   flash();populateSelects();renderSites();renderAssign();
 }
 async function deleteSite(id){
-  if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
+  if(!confirm('この現場を削除しますか？\n関連する作業日報・原価も削除されます。'))return;
   await sb.from('genba_tasks').delete().eq('id',id);
   tasks=tasks.filter(x=>x.id!==id);
   flash();populateSelects();renderSites();renderAssign();
@@ -893,7 +893,7 @@ function openSiteModalFromDetail(){
 }
 
 async function deleteSiteFromDetail(){
-  if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
+  if(!confirm('この現場を削除しますか？\n関連する作業日報・原価も削除されます。'))return;
   await sb.from('genba_tasks').delete().eq('id',detailSiteId);
   tasks=tasks.filter(x=>x.id!==detailSiteId);
   closeModal('siteDetailModal');
@@ -913,7 +913,7 @@ async function toggleSiteCompleteFromDetail(){
   document.getElementById('sdBadges').innerHTML=badges.join('');
 }
 
-// ── 作業記録 ──
+// ── 作業日報 ──
 function renderWorklog(){
   const tid=Number(document.getElementById('wlTaskSel').value),el=document.getElementById('worklogList');
   if(!tid){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>現場を選択してください</div>';return;}
@@ -935,7 +935,7 @@ function openWorklogModal(id=null){
   const tid=Number(document.getElementById('wlTaskSel').value);
   if(!tid){alert('先に現場を選択してください');return;}
   editingWlId=id;
-  document.getElementById('wlModalTitle').textContent=id?'作業記録を編集':'作業記録を追加';
+  document.getElementById('wlModalTitle').textContent=id?'作業日報を編集':'作業日報を追加';
   if(id){
     const r=workRecords.find(x=>x.id===id);
     document.getElementById('wlDate').value=r.date;
