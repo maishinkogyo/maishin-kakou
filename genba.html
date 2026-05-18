@@ -897,7 +897,7 @@ function renderAssign(){
       const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===ds);
       const chips=asgList.map(a=>{
         const w=fieldWorkers.find(x=>x.id===a.worker_id);
-        return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
+        return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
       }).join('');
       return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
         ${chips}
@@ -923,7 +923,7 @@ function renderAssign(){
     </td>`;
   }).join('');
 
-  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+  el.innerHTML=`<table style="min-width:560px;border-collapse:collapse;font-size:12px">
     <thead>
       <tr>
         <th style="background:var(--surface2);padding:6px 8px;border:1px solid var(--border);font-size:11px;min-width:70px"></th>
