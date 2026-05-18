@@ -550,12 +550,30 @@ function deadlineCls(dl){
   return days<0?'red':days<=7?'amber':'green';
 }
 
+function daysLeftSite(dl){return dl?Math.ceil((new Date(dl)-new Date())/864e5):null;}
+function calcSitePri(t){
+  const p=getTaskMeta(t.id).priority;
+  if(p)return Number(p);
+  const n=daysLeftSite(t.deadline);
+  const pct=getTaskKg(t.id)>0?cumulativeKg(t.id)/getTaskKg(t.id):0;
+  if(n!==null&&n<0)return 1;
+  if(n!==null&&n<=3)return 2;
+  if(pct<0.3)return 2;
+  return 3;
+}
+
 // ── 現場一覧 ──
 function renderSites(){
   const filter=document.getElementById('siteFilter').value;
   let list=tasks;
   if(filter==='active')list=tasks.filter(t=>!t.complete);
   if(filter==='complete')list=tasks.filter(t=>t.complete);
+  // 加工アプリと同じ並び順：優先度→納期
+  list=[...list].sort((a,b)=>{
+    const pa=calcSitePri(a),pb=calcSitePri(b);
+    if(pa!==pb)return pa-pb;
+    return(daysLeftSite(a.deadline)??9999)-(daysLeftSite(b.deadline)??9999);
+  });
   const td=todayStr();
   if(!list.length){
     document.getElementById('siteList').innerHTML='<div class="empty"><div class="empty-icon">🏗️</div>現場データがありません</div>';
