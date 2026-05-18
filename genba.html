@@ -560,13 +560,19 @@ async function saveSite(){
   const start_date=document.getElementById('siteStart').value||null;
   const deadline=document.getElementById('siteDeadline').value||null;
   const total_kg=Number(document.getElementById('siteTotalKg').value)||0;
-  const initProgress=Number(document.getElementById('siteInitProgress').value)||0;
+  const progressVal=document.getElementById('siteInitProgress').value;
+  const initProgress=progressVal!==''?Number(progressVal):null;
   if(editingSiteId){
     const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
     if(error){alert('更新失敗: '+error.message);return;}
     const t=tasks.find(x=>x.id===editingSiteId);
     Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
     setTaskKg(editingSiteId,total_kg);
+    // 進捗が入力されていれば新しいwork recordとして追加
+    if(initProgress!==null){
+      const{data:wr}=await sb.from('field_work_records').insert({task_id:editingSiteId,date:todayStr(),progress:initProgress,content:'進捗更新',note:''}).select().single();
+      if(wr){ workRecords.unshift(wr); t.total_kg=total_kg; }
+    }
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
     const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
@@ -574,7 +580,7 @@ async function saveSite(){
     const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg};
     tasks.push(newTask);
     setTaskKg(data.id,total_kg);
-    if(initProgress>0){
+    if(initProgress!==null){
       const{data:wr}=await sb.from('field_work_records').insert({task_id:data.id,date:start_date||todayStr(),progress:initProgress,content:'初期進捗',note:''}).select().single();
       if(wr) workRecords.unshift(wr);
     }
