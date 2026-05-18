@@ -426,7 +426,8 @@ async function initApp(){
       sb.from('field_work_records').select('*').order('date',{ascending:false}),
       sb.from('field_costs').select('*').order('date',{ascending:false}),
     ]);
-    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||'',total_kg:x.total_kg||0}));
+    const kgMap=loadKgMap();
+    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||'',total_kg:kgMap[x.id]||0}));
     fieldWorkers=fw.data||[];
     assignments=asg.data||[];
     workRecords=wr.data||[];
@@ -533,7 +534,7 @@ function openSiteModal(id=null){
     document.getElementById('siteNameSub').value=t.nameSub||'';
     document.getElementById('siteStart').value=t.start_date||'';
     document.getElementById('siteDeadline').value=t.deadline||'';
-    document.getElementById('siteTotalKg').value=t.total_kg||'';
+    document.getElementById('siteTotalKg').value=getTaskKg(id)||'';
     document.getElementById('siteInitProgress').value=latestProgress(id)||'';
   }else{
     document.getElementById('siteId').value='';
@@ -546,6 +547,12 @@ function openSiteModal(id=null){
   }
   openModal('siteModal');
 }
+// total_kgはlocalStorageで管理（DB列不要）
+function loadKgMap(){try{return JSON.parse(localStorage.getItem('genba_kg')||'{}')}catch{return{}}}
+function saveKgMap(m){localStorage.setItem('genba_kg',JSON.stringify(m))}
+function getTaskKg(id){return loadKgMap()[id]||0}
+function setTaskKg(id,kg){const m=loadKgMap();m[id]=kg;saveKgMap(m);}
+
 async function saveSite(){
   const name_main=document.getElementById('siteName').value.trim();
   if(!name_main){alert('現場名を入力してください');return;}
@@ -555,25 +562,18 @@ async function saveSite(){
   const total_kg=Number(document.getElementById('siteTotalKg').value)||0;
   const initProgress=Number(document.getElementById('siteInitProgress').value)||0;
   if(editingSiteId){
-    let{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline,total_kg}).eq('id',editingSiteId);
-    if(error){
-      const r2=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
-      if(r2.error){alert('更新失敗: '+r2.error.message);return;}
-    }
+    const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
+    if(error){alert('更新失敗: '+error.message);return;}
     const t=tasks.find(x=>x.id===editingSiteId);
     Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
+    setTaskKg(editingSiteId,total_kg);
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
-    let{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,total_kg,complete:false,num}).select().single();
-    if(error){
-      // total_kg列がない場合はなしで再試行
-      const r2=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
-      if(r2.error){alert('追加失敗: '+r2.error.message);return;}
-      data=r2.data;
-    }
-    const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg:total_kg||0};
+    const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
+    if(error){alert('追加失敗: '+error.message);return;}
+    const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg};
     tasks.push(newTask);
-    // 初期進捗がある場合はwork recordを作成
+    setTaskKg(data.id,total_kg);
     if(initProgress>0){
       const{data:wr}=await sb.from('field_work_records').insert({task_id:data.id,date:start_date||todayStr(),progress:initProgress,content:'初期進捗',note:''}).select().single();
       if(wr) workRecords.unshift(wr);
