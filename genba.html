@@ -300,6 +300,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>開始日</label><input type="date" id="siteStart"></div>
       <div class="form-group"><label>期限</label><input type="date" id="siteDeadline"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>総kg数</label><input type="number" id="siteTotalKg" min="0" placeholder="0"></div>
+      <div class="form-group"><label>現在の進捗（%）</label><input type="number" id="siteInitProgress" min="0" max="100" placeholder="0"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('siteModal')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveSite()">保存</button>
@@ -422,7 +426,7 @@ async function initApp(){
       sb.from('field_work_records').select('*').order('date',{ascending:false}),
       sb.from('field_costs').select('*').order('date',{ascending:false}),
     ]);
-    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||''}));
+    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||'',total_kg:x.total_kg||0}));
     fieldWorkers=fw.data||[];
     assignments=asg.data||[];
     workRecords=wr.data||[];
@@ -504,6 +508,7 @@ function renderSites(){
       <div class="badges">
         ${t.start_date?`<span class="badge">開始 ${fmt(t.start_date)}</span>`:''}
         ${t.deadline?`<span class="badge ${deadlineCls(t.deadline)}">期限 ${fmt(t.deadline)}</span>`:''}
+        ${t.total_kg>0?`<span class="badge blue">${t.total_kg.toLocaleString()} kg</span>`:''}
         ${ws.length?`<span class="badge blue">今日 ${ws.length}名</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
         ${t.complete?`<span class="badge green">完了</span>`:''}
@@ -528,12 +533,16 @@ function openSiteModal(id=null){
     document.getElementById('siteNameSub').value=t.nameSub||'';
     document.getElementById('siteStart').value=t.start_date||'';
     document.getElementById('siteDeadline').value=t.deadline||'';
+    document.getElementById('siteTotalKg').value=t.total_kg||'';
+    document.getElementById('siteInitProgress').value=latestProgress(id)||'';
   }else{
     document.getElementById('siteId').value='';
     document.getElementById('siteName').value='';
     document.getElementById('siteNameSub').value='';
     document.getElementById('siteStart').value='';
     document.getElementById('siteDeadline').value='';
+    document.getElementById('siteTotalKg').value='';
+    document.getElementById('siteInitProgress').value='';
   }
   openModal('siteModal');
 }
@@ -543,16 +552,24 @@ async function saveSite(){
   const name_sub=document.getElementById('siteNameSub').value.trim();
   const start_date=document.getElementById('siteStart').value||null;
   const deadline=document.getElementById('siteDeadline').value||null;
+  const total_kg=Number(document.getElementById('siteTotalKg').value)||0;
+  const initProgress=Number(document.getElementById('siteInitProgress').value)||0;
   if(editingSiteId){
-    const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
+    const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline,total_kg}).eq('id',editingSiteId);
     if(error){alert('更新失敗: '+error.message);return;}
     const t=tasks.find(x=>x.id===editingSiteId);
-    Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline});
+    Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
-    const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
+    const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,total_kg,complete:false,num}).select().single();
     if(error){alert('追加失敗: '+error.message);return;}
-    tasks.push({...data,nameMain:data.name_main,nameSub:data.name_sub||''});
+    const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg:data.total_kg||0};
+    tasks.push(newTask);
+    // 初期進捗がある場合はwork recordを作成
+    if(initProgress>0){
+      const{data:wr}=await sb.from('field_work_records').insert({task_id:data.id,date:start_date||todayStr(),progress:initProgress,content:'初期進捗',note:''}).select().single();
+      if(wr) workRecords.unshift(wr);
+    }
   }
   flash();closeModal('siteModal');populateSelects();renderSites();
 }
