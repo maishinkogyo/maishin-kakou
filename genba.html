@@ -276,7 +276,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       </div>
     </div>
 
-    <div id="sdRecordList" style="max-height:220px;overflow-y:auto;margin-bottom:16px"></div>
+    <div id="sdRecordList" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
 
     <div class="modal-footer" style="padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-secondary btn-sm" onclick="openSiteModalFromDetail()">✏️ 現場情報を編集</button>
@@ -458,11 +458,11 @@ function populateSelects(){
 }
 
 function latestProgress(tid){
-  const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date));
+  const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
   return r.length?r[0].progress:0;
 }
 function latestRecord(tid){
-  const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date));
+  const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
   return r.length?r[0]:null;
 }
 function assignedWorkers(tid,date){
@@ -643,18 +643,35 @@ function goToSite(tid){
 }
 
 function renderSiteDetailRecords(){
-  const recs=workRecords.filter(r=>r.task_id===detailSiteId).sort((a,b)=>b.date.localeCompare(a.date));
+  const recs=workRecords.filter(r=>r.task_id===detailSiteId).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
   const el=document.getElementById('sdRecordList');
-  if(!recs.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px">記録がありません</div>';return;}
-  el.innerHTML=recs.map(r=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${fmt(r.date)}</span>
-      <span style="font-weight:700;color:var(--accent);white-space:nowrap;min-width:36px">${r.progress}%</span>
-      <span style="flex:1;font-size:13px">${r.content||''}</span>
-      <span style="font-size:12px;color:var(--text-muted)">${r.note||''}</span>
-      <button class="btn btn-secondary btn-sm" onclick="editSiteDetailRecord(${r.id})">編集</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteSiteDetailRecord(${r.id})">削除</button>
-    </div>`).join('');
+  if(!recs.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">記録がありません</div>';return;}
+  el.innerHTML=recs.map((r,i)=>{
+    const isLatest=i===0;
+    const barColor=r.progress>=100?'#10b981':isLatest?'var(--accent)':'#94a3b8';
+    return`<div style="position:relative;padding:10px 12px;margin-bottom:6px;background:${isLatest?'var(--card)':'var(--bg)'};border:1px solid ${isLatest?'var(--accent)':'var(--border)'};border-radius:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fmt(r.date)}</span>
+          ${isLatest?'<span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:10px;font-weight:700">最新</span>':''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px" onclick="editSiteDetailRecord(${r.id})">編集</button>
+          <button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteSiteDetailRecord(${r.id})">削除</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:20px;font-weight:800;color:${barColor};min-width:46px;line-height:1">${r.progress}%</span>
+        <div style="flex:1;background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+          <div style="width:${r.progress}%;height:100%;background:${barColor};border-radius:4px;transition:width .3s"></div>
+        </div>
+      </div>
+      ${(r.content||r.note)?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${r.content?`<span style="font-size:12px;color:var(--text)">${r.content}</span>`:''}
+        ${r.note?`<span style="font-size:12px;color:var(--text-muted)">📝 ${r.note}</span>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 async function saveSiteDetailRecord(){
