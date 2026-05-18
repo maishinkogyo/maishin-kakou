@@ -54,6 +54,11 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 .badge.purple{background:#f3e8ff;color:#9333ea;border-color:#d8b4fe;}
 
 .progress-wrap{margin-top:10px;}
+.unit-tabs{display:flex;gap:4px;flex-wrap:wrap;}
+.unit-tab{padding:4px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;}
+.unit-tab:hover{border-color:var(--accent);color:var(--text);}
+.unit-tab.active{border-color:var(--accent);background:rgba(22,163,74,.12);color:var(--accent);font-weight:600;}
+.unit-tab.none-tab.active{border-color:var(--border);background:var(--surface2);color:var(--text-muted);font-weight:400;}
 .progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;}
 .progress-bar{height:6px;background:var(--surface2);border-radius:999px;overflow:hidden;}
 .progress-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .3s;}
@@ -304,20 +309,64 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 
 <!-- 現場モーダル -->
 <div class="modal-overlay" id="siteModal">
-  <div class="modal">
+  <div class="modal" style="max-width:560px">
     <div class="modal-title" id="siteModalTitle">現場追加</div>
     <input type="hidden" id="siteId">
     <div class="form-row">
-      <div class="form-group"><label>現場名</label><input type="text" id="siteName" placeholder="例：○○邸新築工事"></div>
+      <div class="form-group"><label>メイン項目</label><input type="text" id="siteName" placeholder="例：米子体育館"></div>
       <div class="form-group"><label>サブ項目（任意）</label><input type="text" id="siteNameSub" placeholder="例：２階"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>開始日</label><input type="date" id="siteStart"></div>
-      <div class="form-group"><label>期限</label><input type="date" id="siteDeadline"></div>
+      <div class="form-group"><label>部門</label>
+        <select id="siteDept">
+          <option value="">未設定</option>
+          <option value="建築">建築</option>
+          <option value="土木">土木</option>
+          <option value="住宅基礎">住宅基礎</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="form-group"><label>優先度</label>
+        <select id="sitePriority">
+          <option value="1">1（高）</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>総kg数</label><input type="number" id="siteTotalKg" min="0" placeholder="0"></div>
-      <div class="form-group"><label>初期完了kg数</label><input type="number" id="siteInitProgress" min="0" placeholder="0"></div>
+      <div class="form-group"><label>材料名</label><input type="text" id="siteMaterial" placeholder="例：SUS304"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>開始日</label><input type="date" id="siteStart"></div>
+      <div class="form-group"><label>納期</label><input type="date" id="siteDeadline"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>作業者</label>
+        <select id="siteWorker"><option value="">未割当</option></select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:8px">
+      <label>ユニット</label>
+      <div class="unit-tabs" id="siteUnitTabs">
+        <span class="unit-tab none-tab active" onclick="selectSiteUnitTab('none',this)">なし</span>
+        <span class="unit-tab" onclick="selectSiteUnitTab('full',this)">マイシングレード</span>
+        <span class="unit-tab" onclick="selectSiteUnitTab('outer',this)">外周のみ</span>
+        <span class="unit-tab" onclick="selectSiteUnitTab('other',this)">その他ユニット</span>
+      </div>
+      <input type="hidden" id="siteUnitType" value="none">
+      <input type="text" id="siteUnitOtherNote" placeholder="その他ユニットの内容"
+        style="display:none;margin-top:6px;width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+    </div>
+    <div id="siteSaleInfo" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">🔗 ユニット販売情報</div>
+      <div class="form-row" style="margin:0;gap:8px">
+        <div class="form-group" style="margin:0"><label>販売先</label><input type="text" id="siteSaleBuyer" placeholder="販売先"></div>
+        <div class="form-group" style="margin:0"><label>kg数</label><input type="number" id="siteSaleKg" placeholder="0" min="0" step="0.1"></div>
+        <div class="form-group" style="margin:0"><label>金額（円）</label><input type="number" id="siteSaleAmount" placeholder="0" min="0"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('siteModal')">キャンセル</button>
@@ -511,6 +560,7 @@ function renderSites(){
     const prog=latestProgress(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
     const totalKg=getTaskKg(t.id);
     const completedKg=cumulativeKg(t.id);
+    const meta=getTaskMeta(t.id);
     // 超過日数
     let overdueDays=0;
     if(t.deadline&&!t.complete){
@@ -534,12 +584,16 @@ function renderSites(){
       <div style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:10px;cursor:pointer;line-height:1.3" onclick="goToSite(${t.id})">
         ${t.nameMain}${t.nameSub?` ／ ${t.nameSub}`:''}
       </div>
-      <!-- 日付・超過バッジ -->
-      ${(t.start_date||t.deadline||overdueDays>0)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <!-- バッジ行 -->
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
         ${t.deadline?`<span class="badge ${deadlineCls(t.deadline)}">📅 ${fmt(t.deadline)}</span>`:(t.start_date?`<span class="badge">📅 ${fmt(t.start_date)}</span>`:'')}
         ${overdueDays>0?`<span class="badge red">${overdueDays}日超過</span>`:''}
+        ${meta.dept?`<span class="badge">${meta.dept}</span>`:''}
+        ${meta.priority?`<span class="badge">優先度${meta.priority}</span>`:''}
+        ${meta.material?`<span class="badge blue">${meta.material}</span>`:''}
+        ${meta.unitType&&meta.unitType!=='none'?`<span class="badge purple">${meta.unitType==='full'?'マイシングレード':meta.unitType==='outer'?'外周のみ':meta.unitOtherNote||'その他'}</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
-      </div>`:''}
+      </div>
       <!-- 作業員チップ -->
       ${ws.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
         ${ws.map(w=>`<span style="background:#f3e8ff;color:#7c3aed;border:1px solid #d8b4fe;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`).join('')}
@@ -571,15 +625,37 @@ let editingSiteId=null;
 function openSiteModal(id=null){
   editingSiteId=id;
   document.getElementById('siteModalTitle').textContent=id?'現場を編集':'現場追加';
+  // 作業者セレクト更新
+  const wsel=document.getElementById('siteWorker');
+  wsel.innerHTML='<option value="">未割当</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  // フォームリセット用ヘルパー
+  function setUnitTab(type){
+    document.querySelectorAll('#siteUnitTabs .unit-tab').forEach(t=>t.classList.remove('active'));
+    const tab=[...document.querySelectorAll('#siteUnitTabs .unit-tab')].find(t=>t.getAttribute('onclick').includes("'"+type+"'"));
+    if(tab)tab.classList.add('active');
+    else document.querySelector('#siteUnitTabs .none-tab').classList.add('active');
+    document.getElementById('siteUnitType').value=type;
+    document.getElementById('siteUnitOtherNote').style.display=type==='other'?'block':'none';
+    document.getElementById('siteSaleInfo').style.display=type!=='none'?'block':'none';
+  }
   if(id){
     const t=tasks.find(x=>x.id===id);
+    const meta=getTaskMeta(id);
     document.getElementById('siteId').value=id;
     document.getElementById('siteName').value=t.nameMain;
     document.getElementById('siteNameSub').value=t.nameSub||'';
     document.getElementById('siteStart').value=t.start_date||'';
     document.getElementById('siteDeadline').value=t.deadline||'';
     document.getElementById('siteTotalKg').value=getTaskKg(id)||'';
-    document.getElementById('siteInitProgress').value='';
+    document.getElementById('siteDept').value=meta.dept||'';
+    document.getElementById('sitePriority').value=meta.priority||'3';
+    document.getElementById('siteMaterial').value=meta.material||'';
+    document.getElementById('siteWorker').value=meta.workerId||'';
+    document.getElementById('siteUnitOtherNote').value=meta.unitOtherNote||'';
+    document.getElementById('siteSaleBuyer').value=meta.saleBuyer||'';
+    document.getElementById('siteSaleKg').value=meta.saleKg||'';
+    document.getElementById('siteSaleAmount').value=meta.saleAmount||'';
+    setUnitTab(meta.unitType||'none');
   }else{
     document.getElementById('siteId').value='';
     document.getElementById('siteName').value='';
@@ -587,7 +663,15 @@ function openSiteModal(id=null){
     document.getElementById('siteStart').value='';
     document.getElementById('siteDeadline').value='';
     document.getElementById('siteTotalKg').value='';
-    document.getElementById('siteInitProgress').value='';
+    document.getElementById('siteDept').value='';
+    document.getElementById('sitePriority').value='3';
+    document.getElementById('siteMaterial').value='';
+    document.getElementById('siteWorker').value='';
+    document.getElementById('siteUnitOtherNote').value='';
+    document.getElementById('siteSaleBuyer').value='';
+    document.getElementById('siteSaleKg').value='';
+    document.getElementById('siteSaleAmount').value='';
+    setUnitTab('none');
   }
   openModal('siteModal');
 }
@@ -596,6 +680,19 @@ function loadKgMap(){try{return JSON.parse(localStorage.getItem('genba_kg')||'{}
 function saveKgMap(m){localStorage.setItem('genba_kg',JSON.stringify(m))}
 function getTaskKg(id){return loadKgMap()[id]||0}
 function setTaskKg(id,kg){const m=loadKgMap();m[id]=kg;saveKgMap(m);}
+// 追加メタ情報（部門・優先度・材料・作業者・ユニット等）
+function loadMetaMap(){try{return JSON.parse(localStorage.getItem('genba_task_meta')||'{}')}catch{return{}}}
+function saveMetaMap(m){localStorage.setItem('genba_task_meta',JSON.stringify(m))}
+function getTaskMeta(id){return loadMetaMap()[String(id)]||{}}
+function setTaskMeta(id,meta){const m=loadMetaMap();m[String(id)]={...m[String(id)],...meta};saveMetaMap(m);}
+// ユニットタブ
+function selectSiteUnitTab(type,el){
+  document.querySelectorAll('#siteUnitTabs .unit-tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('siteUnitType').value=type;
+  document.getElementById('siteUnitOtherNote').style.display=type==='other'?'block':'none';
+  document.getElementById('siteSaleInfo').style.display=type!=='none'?'block':'none';
+}
 
 async function saveSite(){
   const name_main=document.getElementById('siteName').value.trim();
@@ -604,19 +701,24 @@ async function saveSite(){
   const start_date=document.getElementById('siteStart').value||null;
   const deadline=document.getElementById('siteDeadline').value||null;
   const total_kg=Number(document.getElementById('siteTotalKg').value)||0;
-  const progressVal=document.getElementById('siteInitProgress').value;
-  const initProgress=progressVal!==''?Number(progressVal):null;
+  const meta={
+    dept:document.getElementById('siteDept').value,
+    priority:document.getElementById('sitePriority').value,
+    material:document.getElementById('siteMaterial').value.trim(),
+    workerId:document.getElementById('siteWorker').value,
+    unitType:document.getElementById('siteUnitType').value,
+    unitOtherNote:document.getElementById('siteUnitOtherNote').value.trim(),
+    saleBuyer:document.getElementById('siteSaleBuyer').value.trim(),
+    saleKg:document.getElementById('siteSaleKg').value,
+    saleAmount:document.getElementById('siteSaleAmount').value,
+  };
   if(editingSiteId){
     const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
     if(error){alert('更新失敗: '+error.message);return;}
     const t=tasks.find(x=>x.id===editingSiteId);
     Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
     setTaskKg(editingSiteId,total_kg);
-    // 進捗が入力されていれば新しいwork recordとして追加
-    if(initProgress!==null){
-      const{data:wr}=await sb.from('field_work_records').insert({task_id:editingSiteId,date:todayStr(),progress:initProgress,content:'進捗更新',note:''}).select().single();
-      if(wr){ workRecords.unshift(wr); t.total_kg=total_kg; }
-    }
+    setTaskMeta(editingSiteId,meta);
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
     const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
@@ -624,10 +726,7 @@ async function saveSite(){
     const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg};
     tasks.push(newTask);
     setTaskKg(data.id,total_kg);
-    if(initProgress!==null){
-      const{data:wr}=await sb.from('field_work_records').insert({task_id:data.id,date:start_date||todayStr(),progress:initProgress,content:'初期進捗',note:''}).select().single();
-      if(wr) workRecords.unshift(wr);
-    }
+    setTaskMeta(data.id,meta);
   }
   flash();closeModal('siteModal');populateSelects();renderSites();
 }
