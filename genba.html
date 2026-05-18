@@ -458,7 +458,7 @@ async function initApp(){
 }
 
 // ── Helpers ──
-function todayStr(){return new Date().toISOString().slice(0,10);}
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function taskName(t){return t.nameMain+(t.nameSub?' ／ '+t.nameSub:'');}
 function fmt(d){return d?d.replace(/-/g,'/'):'－';}
 function fmtMoney(n){return'¥'+Number(n).toLocaleString();}
@@ -842,22 +842,21 @@ async function deleteWorklog(id){
 let weekOffset=0;
 const DAY_NAMES=['月','火','水','木','金','土','日'];
 
-function getWeekDates(){
-  const today=new Date();
-  const dow=today.getDay(); // 0=日
-  const diff=dow===0?-6:1-dow; // 月曜へ
-  const mon=new Date(today);
-  mon.setDate(today.getDate()+diff+weekOffset*7);
-  mon.setHours(0,0,0,0);
-  return Array.from({length:7},(_,i)=>{
-    const d=new Date(mon);d.setDate(mon.getDate()+i);return d;
-  });
-}
 function localDateStr(d){
-  const y=d.getFullYear();
-  const m=String(d.getMonth()+1).padStart(2,'0');
-  const day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getWeekDates(){
+  const now=new Date();
+  // ローカル日付のみ（時刻なし）で今日を作る
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const dow=today.getDay(); // 0=日,1=月,...
+  const daysToMon=dow===0?-6:1-dow;
+  const result=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+daysToMon+weekOffset*7+i);
+    result.push(d);
+  }
+  return result;
 }
 
 function renderAssign(){
