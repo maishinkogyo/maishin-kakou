@@ -269,9 +269,8 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px">📋 今日の進捗を入力</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
         <div class="form-group" style="margin:0;min-width:130px"><label>日付</label><input type="date" id="sdDate"></div>
-        <div class="form-group" style="margin:0;width:80px"><label>進捗（%）</label><input type="number" id="sdProgress" min="0" max="100" placeholder="0"></div>
-        <div class="form-group" style="margin:0;flex:1;min-width:120px"><label>作業内容</label><input type="text" id="sdContent" placeholder="例：基礎工事 など"></div>
-        <div class="form-group" style="margin:0;min-width:100px"><label>メモ</label><input type="text" id="sdNote" placeholder="任意"></div>
+        <div class="form-group" style="margin:0;width:110px"><label>完了kg数</label><input type="number" id="sdKg" min="0" placeholder="完了kg数"></div>
+        <div class="form-group" style="margin:0;flex:1;min-width:120px"><label>メモ（任意）</label><input type="text" id="sdNote" placeholder="任意"></div>
         <button class="btn btn-primary btn-sm" style="margin-bottom:1px" onclick="saveSiteDetailRecord()">＋ 追加</button>
       </div>
     </div>
@@ -303,7 +302,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     </div>
     <div class="form-row">
       <div class="form-group"><label>総kg数</label><input type="number" id="siteTotalKg" min="0" placeholder="0"></div>
-      <div class="form-group"><label>現在の進捗（%）</label><input type="number" id="siteInitProgress" min="0" max="100" placeholder="0"></div>
+      <div class="form-group"><label>初期完了kg数</label><input type="number" id="siteInitProgress" min="0" placeholder="0"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('siteModal')">キャンセル</button>
@@ -458,9 +457,15 @@ function populateSelects(){
   });
 }
 
+function cumulativeKg(tid){
+  return workRecords.filter(x=>x.task_id===tid).reduce((s,r)=>s+Number(r.progress||0),0);
+}
 function latestProgress(tid){
+  const totalKg=getTaskKg(tid);
+  if(totalKg>0) return Math.min(100,Math.round(cumulativeKg(tid)/totalKg*100));
+  // total_kg未設定の場合は最新レコードをそのまま%として扱う
   const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
-  return r.length?r[0].progress:0;
+  return r.length?Math.min(100,r[0].progress):0;
 }
 function latestRecord(tid){
   const r=workRecords.filter(x=>x.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
@@ -490,7 +495,7 @@ function renderSites(){
   document.getElementById('siteList').innerHTML=list.map(t=>{
     const prog=latestProgress(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
     const totalKg=getTaskKg(t.id);
-    const completedKg=totalKg>0?Math.round(totalKg*prog/100):0;
+    const completedKg=cumulativeKg(t.id);
     // 超過日数
     let overdueDays=0;
     if(t.deadline&&!t.complete){
@@ -554,7 +559,7 @@ function openSiteModal(id=null){
     document.getElementById('siteStart').value=t.start_date||'';
     document.getElementById('siteDeadline').value=t.deadline||'';
     document.getElementById('siteTotalKg').value=getTaskKg(id)||'';
-    document.getElementById('siteInitProgress').value=latestProgress(id)||'';
+    document.getElementById('siteInitProgress').value='';
   }else{
     document.getElementById('siteId').value='';
     document.getElementById('siteName').value='';
@@ -629,9 +634,11 @@ function goToSite(tid){
   const prog=latestProgress(tid);
   const td=todayStr();
 
+  const totalKg=getTaskKg(tid);
+  const cumKg=cumulativeKg(tid);
   document.getElementById('sdTitle').textContent=t.nameMain;
   document.getElementById('sdSub').textContent=t.nameSub||'';
-  document.getElementById('sdPct').textContent=prog+'%';
+  document.getElementById('sdPct').textContent=totalKg>0?`${cumKg.toLocaleString()} / ${totalKg.toLocaleString()} kg（${prog}%）`:prog+'%';
   document.getElementById('sdProgressFill').style.width=prog+'%';
 
   // バッジ
@@ -653,8 +660,7 @@ function goToSite(tid){
 
   // 日付デフォルト
   document.getElementById('sdDate').value=td;
-  document.getElementById('sdProgress').value=prog;
-  document.getElementById('sdContent').value='';
+  document.getElementById('sdKg').value='';
   document.getElementById('sdNote').value='';
 
   renderSiteDetailRecords();
@@ -667,47 +673,34 @@ function renderSiteDetailRecords(){
   if(!recs.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">記録がありません</div>';return;}
   el.innerHTML=recs.map((r,i)=>{
     const isLatest=i===0;
-    const barColor=r.progress>=100?'#10b981':isLatest?'var(--accent)':'#94a3b8';
-    return`<div style="position:relative;padding:10px 12px;margin-bottom:6px;background:${isLatest?'var(--card)':'var(--bg)'};border:1px solid ${isLatest?'var(--accent)':'var(--border)'};border-radius:8px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fmt(r.date)}</span>
-          ${isLatest?'<span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:10px;font-weight:700">最新</span>':''}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px" onclick="editSiteDetailRecord(${r.id})">編集</button>
-          <button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteSiteDetailRecord(${r.id})">削除</button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <span style="font-size:20px;font-weight:800;color:${barColor};min-width:46px;line-height:1">${r.progress}%</span>
-        <div style="flex:1;background:var(--border);border-radius:4px;height:6px;overflow:hidden">
-          <div style="width:${r.progress}%;height:100%;background:${barColor};border-radius:4px;transition:width .3s"></div>
-        </div>
-      </div>
-      ${(r.content||r.note)?`<div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${r.content?`<span style="font-size:12px;color:var(--text)">${r.content}</span>`:''}
-        ${r.note?`<span style="font-size:12px;color:var(--text-muted)">📝 ${r.note}</span>`:''}
-      </div>`:''}
+    const kg=Number(r.progress||0);
+    const dayWorkers=assignments.filter(a=>a.task_id===detailSiteId&&a.date===r.date)
+      .map(a=>fieldWorkers.find(w=>w.id===a.worker_id)).filter(Boolean);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:${isLatest?'var(--surface)':'var(--bg)'};border:1px solid ${isLatest?'var(--accent)':'var(--border)'};border-radius:8px;margin-bottom:5px">
+      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;min-width:82px">${r.date}</span>
+      <span style="font-size:13px;font-weight:800;color:#10b981;white-space:nowrap">+${kg.toLocaleString()} kg</span>
+      ${dayWorkers.length?`<span style="font-size:12px;color:#6366f1;white-space:nowrap">⏱ ${dayWorkers.map(w=>w.name).join('・')}</span>`:''}
+      ${r.note?`<span style="font-size:12px;color:var(--text-muted);flex:1">${r.note}</span>`:'<span style="flex:1"></span>'}
+      <button style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:0 2px;line-height:1" onclick="deleteSiteDetailRecord(${r.id})" title="削除">×</button>
     </div>`;
   }).join('');
 }
 
 async function saveSiteDetailRecord(){
   const date=document.getElementById('sdDate').value;
-  const progress=Number(document.getElementById('sdProgress').value)||0;
-  const content=document.getElementById('sdContent').value.trim();
+  const kg=Number(document.getElementById('sdKg').value)||0;
   const note=document.getElementById('sdNote').value.trim();
   if(!date){alert('日付を入力してください');return;}
-  const payload={task_id:detailSiteId,date,progress,content,note};
+  const payload={task_id:detailSiteId,date,progress:kg,content:'',note};
   const{data,error}=await sb.from('field_work_records').insert(payload).select().single();
   if(error){alert('エラー: '+error.message);return;}
   workRecords.unshift(data);
-  document.getElementById('sdContent').value='';
+  document.getElementById('sdKg').value='';
   document.getElementById('sdNote').value='';
-  document.getElementById('sdProgress').value=progress;
   const prog=latestProgress(detailSiteId);
-  document.getElementById('sdPct').textContent=prog+'%';
+  const totalKg=getTaskKg(detailSiteId);
+  const cumKg=cumulativeKg(detailSiteId);
+  document.getElementById('sdPct').textContent=totalKg>0?`${cumKg.toLocaleString()} / ${totalKg.toLocaleString()} kg（${prog}%）`:prog+'%';
   document.getElementById('sdProgressFill').style.width=prog+'%';
   flash();renderSiteDetailRecords();renderSites();
 }
@@ -715,8 +708,7 @@ async function saveSiteDetailRecord(){
 function editSiteDetailRecord(id){
   const r=workRecords.find(x=>x.id===id);
   document.getElementById('sdDate').value=r.date;
-  document.getElementById('sdProgress').value=r.progress;
-  document.getElementById('sdContent').value=r.content||'';
+  document.getElementById('sdKg').value=r.progress;
   document.getElementById('sdNote').value=r.note||'';
   // 削除して再追加する形で編集
   workRecords=workRecords.filter(x=>x.id!==id);
@@ -730,7 +722,9 @@ async function deleteSiteDetailRecord(id){
   if(error){alert('エラー: '+error.message);return;}
   workRecords=workRecords.filter(r=>r.id!==id);
   const prog=latestProgress(detailSiteId);
-  document.getElementById('sdPct').textContent=prog+'%';
+  const totalKg=getTaskKg(detailSiteId);
+  const cumKg=cumulativeKg(detailSiteId);
+  document.getElementById('sdPct').textContent=totalKg>0?`${cumKg.toLocaleString()} / ${totalKg.toLocaleString()} kg（${prog}%）`:prog+'%';
   document.getElementById('sdProgressFill').style.width=prog+'%';
   flash();renderSiteDetailRecords();renderSites();
 }
