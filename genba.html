@@ -675,7 +675,7 @@ function renderSiteDetailRecords(){
     const isLatest=i===0;
     const kg=Number(r.progress||0);
     const dayWorkers=assignments.filter(a=>a.task_id===detailSiteId&&a.date===r.date)
-      .map(a=>fieldWorkers.find(w=>w.id===a.worker_id)).filter(Boolean);
+      .map(a=>{const w=fieldWorkers.find(x=>x.id===a.worker_id);return w?(a.note?`${w.name}:${a.note}h`:w.name):null;}).filter(Boolean);
     return`<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:${isLatest?'var(--surface)':'var(--bg)'};border:1px solid ${isLatest?'var(--accent)':'var(--border)'};border-radius:8px;margin-bottom:5px">
       <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;min-width:82px">${r.date}</span>
       <span style="font-size:13px;font-weight:800;color:#10b981;white-space:nowrap">+${kg.toLocaleString()} kg</span>
@@ -866,9 +866,17 @@ function renderAssign(){
     const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===date);
     const chips=fieldWorkers.map(w=>{
       const asg=asgList.find(a=>a.worker_id===w.id);
-      return asg
-        ?`<span class="worker-toggle assigned" onclick="toggleAssign(${t.id},${w.id},'${date}',${asg.id})">${w.name} ×</span>`
-        :`<span class="worker-toggle unassigned" onclick="toggleAssign(${t.id},${w.id},'${date}',null)">${w.name} ＋</span>`;
+      if(asg){
+        const hrs=asg.note||'';
+        return`<span class="worker-toggle assigned" style="display:inline-flex;align-items:center;gap:4px;padding-right:6px">
+          <span style="cursor:pointer" onclick="toggleAssign(${t.id},${w.id},'${date}',${asg.id})">${w.name} ×</span>
+          <input type="number" min="0" max="24" step="0.5" value="${hrs}" placeholder="h"
+            style="width:38px;border:none;background:rgba(255,255,255,.7);border-radius:4px;font-size:11px;padding:1px 4px;color:#1d4ed8;font-weight:700;text-align:center"
+            title="作業時間（h）"
+            onchange="updateAssignHours(${asg.id},this.value)">
+        </span>`;
+      }
+      return`<span class="worker-toggle unassigned" onclick="toggleAssign(${t.id},${w.id},'${date}',null)">${w.name} ＋</span>`;
     }).join('');
     return`<div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -895,6 +903,15 @@ async function toggleAssign(tid,wid,date,asgId){
   }
   renderAssign();
   renderSites();
+}
+
+async function updateAssignHours(asgId,val){
+  const note=val?String(Number(val)):'';
+  await sb.from('field_assignments').update({note}).eq('id',asgId);
+  const a=assignments.find(x=>x.id===asgId);
+  if(a) a.note=note;
+  // 詳細モーダルが開いていれば履歴も更新
+  if(detailSiteId) renderSiteDetailRecords();
 }
 
 // ── 原価管理 ──
