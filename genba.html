@@ -281,6 +281,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     <div class="modal-footer" style="padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-secondary btn-sm" onclick="openSiteModalFromDetail()">✏️ 現場情報を編集</button>
       <button class="btn btn-sm" id="sdCompleteBtn" onclick="toggleSiteCompleteFromDetail()"></button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSiteFromDetail()">🗑 削除</button>
       <div class="spacer"></div>
       <button class="btn btn-secondary" onclick="closeModal('siteDetailModal')">閉じる</button>
     </div>
@@ -487,37 +488,55 @@ function renderSites(){
     return;
   }
   document.getElementById('siteList').innerHTML=list.map(t=>{
-    const prog=latestProgress(t.id),rec=latestRecord(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
-    return`<div class="site-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div style="flex:1;cursor:pointer" onclick="goToSite(${t.id})">
-          <div class="site-name">${t.nameMain}</div>
-          ${t.nameSub?`<div class="site-sub">${t.nameSub}</div>`:''}
+    const prog=latestProgress(t.id),ws=assignedWorkers(t.id,td),cost=totalCost(t.id);
+    const totalKg=getTaskKg(t.id);
+    const completedKg=totalKg>0?Math.round(totalKg*prog/100):0;
+    // 超過日数
+    let overdueDays=0;
+    if(t.deadline&&!t.complete){
+      overdueDays=Math.ceil((new Date()-new Date(t.deadline))/864e5);
+      if(overdueDays<0)overdueDays=0;
+    }
+    // バー色
+    const barColor=prog>=100?'#10b981':'linear-gradient(90deg,#6366f1,#8b5cf6)';
+    return`<div class="site-card" style="cursor:default;${t.complete?'opacity:.75':''}">
+      <!-- 上段: No / 作業員数 / ステータス / 編集 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--text-muted);font-weight:600">No.${t.num||'-'}</span>
+          ${ws.length?`<span style="font-size:12px;font-weight:800;background:#dbeafe;color:#2563eb;border-radius:6px;padding:2px 9px;border:1px solid #93c5fd">${ws.length}</span>`:''}
+          ${overdueDays>0?`<span style="font-size:11px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 8px;border:1px solid #fca5a5">超過</span>`:''}
+          ${t.complete?`<span style="font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:6px;padding:2px 8px;border:1px solid #86efac">完了</span>`:''}
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <div style="text-align:right">
-            <div style="font-size:22px;font-weight:800;color:${prog>=100?'var(--accent)':'var(--text)'}">${prog}%</div>
-            <div style="font-size:10px;color:var(--text-muted)">進捗</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px">
-            <button class="btn btn-secondary btn-sm" onclick="openSiteModal(${t.id})">編集</button>
-            <button class="btn btn-sm" style="${t.complete?'background:#6b7280':'background:var(--accent)'};color:#fff" onclick="toggleSiteComplete(${t.id})">${t.complete?'再開':'完了'}</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteSite(${t.id})">削除</button>
-          </div>
-        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openSiteModal(${t.id})" style="display:flex;align-items:center;gap:4px">✏️ 編集</button>
       </div>
-      <div class="badges">
-        ${t.start_date?`<span class="badge">開始 ${fmt(t.start_date)}</span>`:''}
-        ${t.deadline?`<span class="badge ${deadlineCls(t.deadline)}">期限 ${fmt(t.deadline)}</span>`:''}
-        ${t.total_kg>0?`<span class="badge blue">${t.total_kg.toLocaleString()} kg</span>`:''}
-        ${ws.length?`<span class="badge blue">今日 ${ws.length}名</span>`:''}
+      <!-- 現場名 -->
+      <div style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:10px;cursor:pointer;line-height:1.3" onclick="goToSite(${t.id})">
+        ${t.nameMain}${t.nameSub?` ／ ${t.nameSub}`:''}
+      </div>
+      <!-- 日付・超過バッジ -->
+      ${(t.start_date||t.deadline||overdueDays>0)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${t.deadline?`<span class="badge ${deadlineCls(t.deadline)}">📅 ${fmt(t.deadline)}</span>`:(t.start_date?`<span class="badge">📅 ${fmt(t.start_date)}</span>`:'')}
+        ${overdueDays>0?`<span class="badge red">${overdueDays}日超過</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
-        ${t.complete?`<span class="badge green">完了</span>`:''}
+      </div>`:''}
+      <!-- 作業員チップ -->
+      ${ws.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${ws.map(w=>`<span style="background:#f3e8ff;color:#7c3aed;border:1px solid #d8b4fe;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`).join('')}
+      </div>`:''}
+      <!-- kg表示 -->
+      ${totalKg>0?`<div style="margin-bottom:8px">
+        <span style="font-size:15px;font-weight:700;color:#10b981">${completedKg.toLocaleString()}</span>
+        <span style="font-size:13px;color:var(--text-muted);font-weight:600"> / ${totalKg.toLocaleString()} kg</span>
+      </div>`:''}
+      <!-- プログレスバー -->
+      <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;cursor:pointer" onclick="goToSite(${t.id})">
+        <div style="width:${prog}%;height:100%;background:${barColor};border-radius:6px;transition:width .3s"></div>
       </div>
-      <div class="progress-wrap" onclick="goToSite(${t.id})" style="cursor:pointer">
-        <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+        <span>${totalKg>0?`${completedKg.toLocaleString()} kg 完了`:'進捗'}</span>
+        <span style="font-weight:700;color:${prog>=100?'#10b981':'var(--text-muted)'}">${prog}%</span>
       </div>
-      ${rec?`<div style="font-size:12px;color:var(--text-muted);margin-top:8px">📝 ${fmt(rec.date)} ${rec.content||''}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -719,6 +738,14 @@ async function deleteSiteDetailRecord(id){
 function openSiteModalFromDetail(){
   closeModal('siteDetailModal');
   openSiteModal(detailSiteId);
+}
+
+async function deleteSiteFromDetail(){
+  if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
+  await sb.from('genba_tasks').delete().eq('id',detailSiteId);
+  tasks=tasks.filter(x=>x.id!==detailSiteId);
+  closeModal('siteDetailModal');
+  flash();populateSelects();renderSites();renderAssign();
 }
 
 async function toggleSiteCompleteFromDetail(){
