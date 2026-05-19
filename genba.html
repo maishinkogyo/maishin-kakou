@@ -102,6 +102,9 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 .worker-toggle.unassigned{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
 .worker-toggle.unassigned:hover{background:#e2e8f0;color:var(--text);}
 .assign-banner{border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.wl-tab{padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.wl-tab:hover{color:var(--text);}
+.wl-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
@@ -181,17 +184,32 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- 作業日報 -->
       <div class="page" id="page-worklog">
         <div class="page-title">作業日報</div>
-        <div class="page-desc">現場ごとの日々の作業内容と進捗</div>
-        <div class="toolbar">
-          <div class="form-group" style="min-width:220px;margin:0">
-            <select id="wlTaskSel" onchange="renderWorklog()">
-              <option value="">現場を選択…</option>
-            </select>
-          </div>
-          <div class="spacer"></div>
-          <button class="btn btn-primary" onclick="openWorklogModal()">＋ 記録追加</button>
+        <!-- タブ -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0">
+          <button class="wl-tab active" id="wlTab-list" onclick="switchWlTab('list')">📋 一覧</button>
+          <button class="wl-tab" id="wlTab-summary" onclick="switchWlTab('summary')">📊 集計</button>
         </div>
-        <div id="worklogList"></div>
+        <!-- 一覧 -->
+        <div id="wlPane-list">
+          <div class="toolbar">
+            <div class="form-group" style="min-width:220px;margin:0">
+              <select id="wlTaskSel" onchange="renderWorklog()">
+                <option value="">現場を選択…</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openWorklogModal()">＋ 記録追加</button>
+          </div>
+          <div id="worklogList"></div>
+        </div>
+        <!-- 集計 -->
+        <div id="wlPane-summary" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" id="wlSumBtn-day" onclick="switchWlSummary('day')" style="background:var(--accent);color:#fff">日別</button>
+            <button class="btn btn-secondary btn-sm" id="wlSumBtn-site" onclick="switchWlSummary('site')">現場別</button>
+          </div>
+          <div id="wlSummaryContent"></div>
+        </div>
       </div>
 
       <!-- 人員配置 -->
@@ -1179,6 +1197,124 @@ async function deleteWorklog(id){
   if(error){alert('エラー: '+error.message);return;}
   workRecords=workRecords.filter(r=>r.id!==id);
   flash();renderWorklog();renderSites();
+}
+
+// ── 作業日報 タブ・集計 ──
+let wlSummaryMode='day';
+function switchWlTab(tab){
+  ['list','summary'].forEach(t=>{
+    document.getElementById('wlPane-'+t).style.display=t===tab?'':'none';
+    document.getElementById('wlTab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='summary') renderWlSummary();
+}
+function switchWlSummary(mode){
+  wlSummaryMode=mode;
+  ['day','site'].forEach(m=>{
+    const btn=document.getElementById('wlSumBtn-'+m);
+    btn.style.background=m===mode?'var(--accent)':'';
+    btn.style.color=m===mode?'#fff':'';
+  });
+  renderWlSummary();
+}
+function wlParseNote(note){try{return JSON.parse(note||'{}')}catch{return{};}}
+function wlWorkerName(id){const w=fieldWorkers.find(x=>x.id===Number(id)||x.id===id);return w?w.name:id||'';}
+function renderWlSummary(){
+  const el=document.getElementById('wlSummaryContent');
+  // 作業日報レコードのみ（site detail progressは progress>0かつnoteが{}っぽいものを除外したいが全件対象でOK）
+  const recs=workRecords.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!recs.length){el.innerHTML='<div class="empty"><div class="empty-icon">📊</div>記録がありません</div>';return;}
+
+  if(wlSummaryMode==='day'){
+    // 日別集計
+    const byDay={};
+    recs.forEach(r=>{
+      if(!byDay[r.date])byDay[r.date]=[];
+      byDay[r.date].push(r);
+    });
+    const days=Object.keys(byDay).sort((a,b)=>b.localeCompare(a));
+    el.innerHTML=days.map(date=>{
+      const list=byDay[date];
+      const sites=[...new Set(list.map(r=>{const t=tasks.find(x=>x.id===r.task_id);return t?t.nameMain:'不明';}))];
+      const workers=[...new Set(list.map(r=>{const ex=wlParseNote(r.note);return ex.worker?wlWorkerName(ex.worker):''}).filter(Boolean))];
+      return`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-weight:700;font-size:15px">${fmt(date)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge blue">${list.length}件</span>
+            ${workers.length?`<span class="badge">${workers.join('・')}</span>`:''}
+          </div>
+        </div>
+        ${sites.map(s=>{
+          const sRecs=list.filter(r=>{const t=tasks.find(x=>x.id===r.task_id);return t&&t.nameMain===s;});
+          return`<div style="padding:8px 0;border-top:1px solid var(--border)">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px">🏗 ${s}</div>
+            ${sRecs.map(r=>{
+              const ex=wlParseNote(r.note);
+              const wname=ex.worker?wlWorkerName(ex.worker):'';
+              const hours=ex.timeStart&&ex.timeEnd?`${ex.timeStart}〜${ex.timeEnd}`:'';
+              return`<div style="font-size:12px;color:var(--text-muted);display:flex;gap:8px;flex-wrap:wrap;padding:2px 0">
+                ${wname?`<span>👤 ${wname}</span>`:''}
+                ${hours?`<span>⏱ ${hours}</span>`:''}
+                ${r.content?`<span>${r.content}</span>`:''}
+                ${ex.location?`<span class="badge" style="font-size:10px">${ex.location}</span>`:''}
+                ${ex.workType&&ex.workType!=='-'?`<span class="badge" style="font-size:10px">${ex.workType}</span>`:''}
+              </div>`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+
+  }else{
+    // 現場別集計
+    const bySite={};
+    recs.forEach(r=>{
+      const k=r.task_id;
+      if(!bySite[k])bySite[k]=[];
+      bySite[k].push(r);
+    });
+    el.innerHTML=Object.entries(bySite).map(([tid,list])=>{
+      const t=tasks.find(x=>x.id===Number(tid));
+      const siteName=t?t.nameMain:'不明';
+      const siteSub=t?t.nameSub:'';
+      const dates=[...new Set(list.map(r=>r.date))].sort((a,b)=>b.localeCompare(a));
+      const workers=[...new Set(list.map(r=>{const ex=wlParseNote(r.note);return ex.worker?wlWorkerName(ex.worker):''}).filter(Boolean))];
+      const totalKg=getTaskKg(Number(tid));
+      const cumKg=cumulativeKg(Number(tid));
+      const prog=totalKg>0?Math.min(100,Math.round(cumKg/totalKg*100)):latestProgress(Number(tid));
+      return`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${siteName}${siteSub?` ／ ${siteSub}`:''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="badge blue">${dates.length}日</span>
+            <span class="badge blue">${list.length}件</span>
+          </div>
+        </div>
+        ${workers.length?`<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
+          ${workers.map(w=>`<span style="background:#f3e8ff;color:#7c3aed;border:1px solid #d8b4fe;border-radius:20px;padding:2px 8px;font-size:12px">👤 ${w}</span>`).join('')}
+        </div>`:''}
+        ${totalKg>0?`<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:3px"><span>${cumKg.toLocaleString()} / ${totalKg.toLocaleString()} kg</span><span style="font-weight:700">${prog}%</span></div>
+          <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden"><div style="width:${prog}%;height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:4px"></div></div>
+        </div>`:''}
+        <div style="font-size:12px;color:var(--text-muted)">
+          ${dates.slice(0,5).map(d=>{
+            const dRecs=list.filter(r=>r.date===d);
+            const dWorkers=[...new Set(dRecs.map(r=>{const ex=wlParseNote(r.note);return ex.worker?wlWorkerName(ex.worker):''}).filter(Boolean))];
+            return`<div style="padding:5px 0;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+              <span style="white-space:nowrap;min-width:70px">${fmt(d)}</span>
+              ${dWorkers.length?`<span>${dWorkers.join('・')}</span>`:''}
+              ${dRecs[0]&&dRecs[0].content?`<span style="flex:1">${dRecs[0].content}</span>`:''}
+            </div>`;
+          }).join('')}
+          ${dates.length>5?`<div style="padding:5px 0;border-top:1px solid var(--border);color:var(--text-muted)">… 他 ${dates.length-5}日</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 // ── 人員配置（週間グリッド） ──
