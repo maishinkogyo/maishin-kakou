@@ -389,6 +389,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>作業者</label>
         <select id="siteWorker"><option value="">未割当</option></select>
       </div>
+      <div class="form-group"><label>請会社</label><input type="text" id="siteClient" placeholder="会社名"></div>
     </div>
     <div class="form-group" style="margin-bottom:8px">
       <label>ユニット</label>
@@ -709,6 +710,7 @@ function openSiteModal(id=null){
     document.getElementById('sitePriority').value=meta.priority||'3';
     document.getElementById('siteMaterial').value=meta.material||'';
     document.getElementById('siteWorker').value=meta.workerId||'';
+    document.getElementById('siteClient').value=meta.client||'';
     document.getElementById('siteUnitOtherNote').value=meta.unitOtherNote||'';
     document.getElementById('siteSaleBuyer').value=meta.saleBuyer||'';
     document.getElementById('siteSaleKg').value=meta.saleKg||'';
@@ -725,6 +727,7 @@ function openSiteModal(id=null){
     document.getElementById('sitePriority').value='3';
     document.getElementById('siteMaterial').value='';
     document.getElementById('siteWorker').value='';
+    document.getElementById('siteClient').value='';
     document.getElementById('siteUnitOtherNote').value='';
     document.getElementById('siteSaleBuyer').value='';
     document.getElementById('siteSaleKg').value='';
@@ -764,6 +767,7 @@ async function saveSite(){
     priority:document.getElementById('sitePriority').value,
     material:document.getElementById('siteMaterial').value.trim(),
     workerId:document.getElementById('siteWorker').value,
+    client:document.getElementById('siteClient').value.trim(),
     unitType:document.getElementById('siteUnitType').value,
     unitOtherNote:document.getElementById('siteUnitOtherNote').value.trim(),
     saleBuyer:document.getElementById('siteSaleBuyer').value.trim(),
