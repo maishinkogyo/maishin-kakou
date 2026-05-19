@@ -1057,9 +1057,21 @@ function renderWorklog(){
   }).join('');
 }
 
-function openWorklogModal(id=null){
+function openWorklogFromAssign(tid, date, workerIds){
+  // 作業日報タブに切り替え
+  showPage('worklog');
+  switchWlTab('list');
+  // 現場セレクトをセット
+  const sel=document.getElementById('wlTaskSel');
+  sel.value=tid;
+  renderWorklog();
+  // 日付・最初の作業員をprefillして開く
+  openWorklogModal(null,{date, workerIds});
+}
+
+function openWorklogModal(id=null, prefill=null){
   const tid=Number(document.getElementById('wlTaskSel').value);
-  if(!tid){alert('先に現場を選択してください');return;}
+  if(!tid&&!prefill){alert('先に現場を選択してください');return;}
   editingWlId=id;
   document.getElementById('wlModalTitle').textContent=id?'作業日報を編集':'作業日報を追加';
   // workerとdriverのselectを再生成
@@ -1104,8 +1116,10 @@ function openWorklogModal(id=null){
     document.getElementById('wlSupportOX').value=ex.supportOX||'-';
     document.getElementById('wlOther').value=ex.other||'';
   }else{
-    document.getElementById('wlDate').value=todayStr();
-    document.getElementById('wlWorker').value='';
+    document.getElementById('wlDate').value=prefill?.date||todayStr();
+    // 複数作業員がいる場合は最初の1人をセット
+    const firstWorker=prefill?.workerIds?.length?String(prefill.workerIds[0]):'';
+    document.getElementById('wlWorker').value=firstWorker;
     document.getElementById('wlClient').value='';
     document.getElementById('wlContent').value='';
     document.getElementById('wlUnitPass').value='-';
@@ -1378,9 +1392,13 @@ function renderAssign(){
         const w=fieldWorkers.find(x=>x.id===a.worker_id);
         return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
       }).join('');
+      const wids=asgList.map(a=>a.worker_id);
       return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
         ${chips}
-        <div style="text-align:right;font-size:10px;color:${asgList.length?'#2563eb':'var(--border)'};margin-top:2px">${asgList.length?asgList.length+'名':''}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+          <span style="font-size:10px;color:${asgList.length?'#2563eb':'var(--border)'}">${asgList.length?asgList.length+'名':''}</span>
+          ${asgList.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openWorklogFromAssign(${t.id},'${ds}',[${wids.join(',')}])">日報</button>`:''}
+        </div>
       </td>`;
     }).join('');
     return`<tr>
