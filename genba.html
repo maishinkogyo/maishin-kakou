@@ -314,6 +314,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <label>作業員</label>
       <div id="nippoWorkersDisp" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);min-height:36px"></div>
     </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>作業員を変更 <span style="font-size:11px;color:var(--text-muted);font-weight:400">（タップで追加／解除）</span></label>
+      <div id="nippoWorkerToggles" style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0"></div>
+    </div>
     <div class="form-group" style="margin-bottom:10px"><label>作業内容</label><textarea id="nippoContent" rows="3" placeholder="本日の作業内容…"></textarea></div>
     <div class="form-row">
       <div class="form-group"><label>施工場所</label>
@@ -1015,7 +1019,7 @@ function openNippoFromAssign(tid,date,workerIds){
   editingOtherNippoId=null;
   nippoIsOther=false;
   document.getElementById('nippoModal').dataset.tid=tid;
-  openModal('nippoModal');
+  renderNippoWorkerToggles();openModal('nippoModal');
 }
 
 function openNippoFromOther(date,workerIds){
@@ -1042,7 +1046,7 @@ function openNippoFromOther(date,workerIds){
   document.getElementById('nippoCar').value='';
   document.getElementById('nippoUnitPass').value='-';
   document.getElementById('nippoOther').value='';
-  openModal('nippoModal');
+  renderNippoWorkerToggles();openModal('nippoModal');
 }
 
 function editNippo(id){
@@ -1074,7 +1078,7 @@ function editNippo(id){
   editingOtherNippoId=null;
   nippoIsOther=false;
   document.getElementById('nippoModal').dataset.tid=r.task_id;
-  openModal('nippoModal');
+  renderNippoWorkerToggles();openModal('nippoModal');
 }
 
 function editOtherNippo(id){
@@ -1105,7 +1109,7 @@ function editOtherNippo(id){
   document.getElementById('nippoCar').value=ex.car||'';
   document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
   document.getElementById('nippoOther').value=ex.other||'';
-  openModal('nippoModal');
+  renderNippoWorkerToggles();openModal('nippoModal');
 }
 
 async function saveNippo(){
@@ -1165,6 +1169,32 @@ function deleteOtherNippo(id){
   if(!confirm('この日報を削除しますか？'))return;
   saveOtherNippoList(loadOtherNippoList().filter(x=>x.id!==id));
   flash('削除しました');renderNippo();
+}
+
+// 作業員トグル描画（nippoWorkerIds を直接更新）
+function renderNippoWorkerToggles(){
+  const el=document.getElementById('nippoWorkerToggles');
+  if(!el)return;
+  const isOther=nippoIsOther;
+  const accentOn=isOther?'#92400e':'var(--accent)';
+  const bgOn=isOther?'#fef9c3':'var(--accent-light)';
+  const chipBg=isOther?'#fef9c3':'#dbeafe';
+  const chipColor=isOther?'#854d0e':'#1d4ed8';
+  el.innerHTML=fieldWorkers.map(w=>{
+    const on=nippoWorkerIds.map(Number).includes(w.id);
+    return`<span onclick="toggleNippoWorker(${w.id})" style="cursor:pointer;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid ${on?accentOn:'var(--border)'};background:${on?bgOn:'var(--surface2)'};color:${on?accentOn:'var(--text-muted)'}">${on?'✓ ':''}${w.name}</span>`;
+  }).join('');
+  const disp=document.getElementById('nippoWorkersDisp');
+  if(disp) disp.innerHTML=nippoWorkerIds.map(wid=>{
+    const w=fieldWorkers.find(x=>x.id===Number(wid));
+    return w?`<span style="background:${chipBg};color:${chipColor};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+  }).join('')||'<span style="color:var(--text-muted);font-size:12px">未設定</span>';
+}
+function toggleNippoWorker(wid){
+  const ids=nippoWorkerIds.map(Number);
+  const idx=ids.indexOf(wid);
+  if(idx>=0) nippoWorkerIds.splice(idx,1); else nippoWorkerIds.push(wid);
+  renderNippoWorkerToggles();
 }
 
 // ── 日報タブ切り替え ──
