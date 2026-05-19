@@ -112,6 +112,22 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 .empty-icon{font-size:36px;margin-bottom:8px;}
 
 #flash{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9000;display:none;box-shadow:0 4px 16px rgba(0,0,0,.15);}
+/* タイムスケジュール */
+.nippo-tab{padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.nippo-tab:hover{color:var(--text);}
+.nippo-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tl-wrap{display:flex;overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
+.tl-axis{flex-shrink:0;width:46px;border-right:1px solid var(--border);}
+.tl-axis-header{height:42px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.tl-hour-mark{height:60px;font-size:10px;color:var(--text-muted);display:flex;align-items:flex-start;padding:3px 4px 0;border-top:1px solid var(--border);box-sizing:border-box;}
+.tl-col{flex:1;min-width:120px;display:flex;flex-direction:column;border-right:1px solid var(--border);}
+.tl-col:last-child{border-right:none;}
+.tl-col-name{height:42px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--text);border-bottom:1px solid var(--border);padding:0 4px;text-align:center;background:var(--surface2);}
+.tl-track{flex:1;position:relative;background:#f8fafc;}
+.tl-hour-line{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none;}
+.tl-block{position:absolute;left:3px;right:3px;border-radius:5px;padding:4px 6px;font-size:11px;font-weight:600;color:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);line-height:1.4;box-sizing:border-box;cursor:default;}
+.tl-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.tl-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text);}
 
 .cat-材料費{background:#dbeafe;color:#2563eb;border-color:#93c5fd;}
 .cat-外注費{background:#fef3c7;color:#d97706;border-color:#fcd34d;}
@@ -196,18 +212,33 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- 日報集計 -->
       <div class="page" id="page-nippo">
         <div class="page-title">日報集計</div>
-        <div class="page-desc">作業配置から入力された日報の一覧・集計</div>
-        <div class="toolbar" style="flex-wrap:wrap;gap:8px">
-          <div class="form-group" style="min-width:180px;margin:0">
-            <select id="nippoSiteSel" onchange="renderNippo()">
-              <option value="">全現場</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin:0">
-            <input type="month" id="nippoMonth" onchange="renderNippo()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px">
-          </div>
+        <!-- タブ -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0">
+          <button class="nippo-tab active" id="nippoTab-list" onclick="switchNippoTab('list')">📋 一覧</button>
+          <button class="nippo-tab" id="nippoTab-timeline" onclick="switchNippoTab('timeline')">📅 タイムスケジュール</button>
         </div>
-        <div id="nippoList" style="margin-top:12px"></div>
+        <!-- 一覧パネル -->
+        <div id="nippoPane-list">
+          <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+            <div class="form-group" style="min-width:180px;margin:0">
+              <select id="nippoSiteSel" onchange="renderNippo()">
+                <option value="">全現場</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <input type="month" id="nippoMonth" onchange="renderNippo()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px">
+            </div>
+          </div>
+          <div id="nippoList" style="margin-top:12px"></div>
+        </div>
+        <!-- スケジュールパネル -->
+        <div id="nippoPane-timeline" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <input type="date" id="tlNippoDate" onchange="renderNippoTimeline()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('tlNippoDate').value=todayStr();renderNippoTimeline()">今日</button>
+          </div>
+          <div id="nippoTimelineView"></div>
+        </div>
       </div>
 
       <!-- 原価管理 -->
@@ -1134,6 +1165,88 @@ function deleteOtherNippo(id){
   if(!confirm('この日報を削除しますか？'))return;
   saveOtherNippoList(loadOtherNippoList().filter(x=>x.id!==id));
   flash('削除しました');renderNippo();
+}
+
+// ── 日報タブ切り替え ──
+function switchNippoTab(tab){
+  ['list','timeline'].forEach(t=>{
+    document.getElementById('nippoPane-'+t).style.display=t===tab?'':'none';
+    document.getElementById('nippoTab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='timeline'){
+    if(!document.getElementById('tlNippoDate').value) document.getElementById('tlNippoDate').value=todayStr();
+    renderNippoTimeline();
+  }
+}
+
+// ── タイムスケジュール（日報） ──
+const TL_COLORS=['#16a34a','#2563eb','#9333ea','#d97706','#dc2626','#0891b2','#7c3aed','#c026d3','#059669','#0284c7'];
+const nippoColorMap={};let nippoColorIdx=0;
+function getNippoSiteColor(key){if(!nippoColorMap[key])nippoColorMap[key]=TL_COLORS[nippoColorIdx++%TL_COLORS.length];return nippoColorMap[key];}
+
+function renderNippoTimeline(){
+  const el=document.getElementById('nippoTimelineView');
+  if(!el)return;
+  const date=document.getElementById('tlNippoDate').value;
+  if(!date){el.innerHTML='<div class="empty"><div class="empty-icon">📅</div>日付を選択してください</div>';return;}
+
+  // その日の日報を収集（現場＋その他）
+  const allRecords=[];
+  workRecords.forEach(r=>{
+    try{const ex=JSON.parse(r.note||'{}');if(ex._type==='nippo'&&r.date===date)allRecords.push({r,ex,isOther:false});}catch(e){}
+  });
+  loadOtherNippoList().forEach(r=>{
+    try{const ex=JSON.parse(r.note||'{}');if(r.date===date)allRecords.push({r,ex,isOther:true});}catch(e){}
+  });
+
+  if(!allRecords.length){el.innerHTML='<div class="empty"><div class="empty-icon">📅</div>この日の日報がありません</div>';return;}
+
+  // 時間レンジ計算
+  let minH=7,maxH=18;
+  allRecords.forEach(({ex})=>{
+    if(ex.timeStart){const h=parseInt(ex.timeStart);if(!isNaN(h)){if(h<minH)minH=h;}}
+    if(ex.timeEnd){const h=parseInt(ex.timeEnd)+1;if(!isNaN(h)){if(h>maxH)maxH=h;}}
+  });
+  const pxPerMin=1;
+  const trackH=(maxH-minH)*60*pxPerMin;
+
+  // 時間軸
+  const hourMarks=[];
+  for(let h=minH;h<=maxH;h++) hourMarks.push(`<div class="tl-hour-mark">${h}:00</div>`);
+  const gridLines=[];
+  for(let h=minH;h<=maxH;h++) gridLines.push(`<div class="tl-hour-line" style="top:${(h-minH)*60}px"></div>`);
+  const timeAxis=`<div class="tl-axis"><div class="tl-axis-header"></div>${hourMarks.join('')}</div>`;
+
+  // 作業員ごとのカラム生成
+  const workerCols=fieldWorkers.map(w=>{
+    // この作業員が含まれる日報を探す
+    const myRecs=allRecords.filter(({ex})=>(ex.allWorkers||[]).map(Number).includes(w.id));
+    const blocks=myRecs.filter(({ex})=>ex.timeStart&&ex.timeEnd).map(({r,ex,isOther})=>{
+      const siteName=isOther?'その他':(()=>{const t=tasks.find(x=>x.id===r.task_id);return t?(t.nameMain+(t.nameSub?`／${t.nameSub}`:'')):'-';})();
+      const colorKey=isOther?'__other__':String(r.task_id);
+      const color=isOther?'#854d0e':getNippoSiteColor(colorKey);
+      const[sh,sm]=ex.timeStart.split(':').map(Number);
+      const[eh,em]=ex.timeEnd.split(':').map(Number);
+      const top=(sh*60+sm-minH*60)*pxPerMin;
+      const height=Math.max(20,((eh*60+em)-(sh*60+sm))*pxPerMin);
+      return`<div class="tl-block" style="top:${top}px;height:${height}px;background:${color}" title="${siteName} ${ex.timeStart}〜${ex.timeEnd}">${siteName}<br>${ex.timeStart}〜${ex.timeEnd}</div>`;
+    }).join('');
+    return`<div class="tl-col">
+      <div class="tl-col-name">${w.name}</div>
+      <div class="tl-track" style="height:${trackH}px">${gridLines.join('')}${blocks}</div>
+    </div>`;
+  }).join('');
+
+  // 凡例
+  const legend=Object.entries(nippoColorMap).map(([key,color])=>{
+    const t=tasks.find(x=>String(x.id)===key);
+    const label=t?(t.nameMain+(t.nameSub?`／${t.nameSub}`:'')):key;
+    return`<div class="tl-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:${color};display:inline-block;flex-shrink:0"></span>${label}</div>`;
+  }).join('');
+  const otherInUse=allRecords.some(({isOther})=>isOther);
+  const otherLegend=otherInUse?`<div class="tl-legend-item"><span style="width:12px;height:12px;border-radius:3px;background:#854d0e;display:inline-block;flex-shrink:0"></span>その他</div>`:'';
+
+  el.innerHTML=`<div class="tl-wrap">${timeAxis}${workerCols}</div><div class="tl-legend">${legend}${otherLegend}</div>`;
 }
 
 function nippoCard(r,isOther=false){
