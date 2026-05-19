@@ -1198,7 +1198,16 @@ function renderAssign(){
       ${siteRows}
       <tr>
         <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);white-space:nowrap;vertical-align:middle">その他</td>
-        ${strs.map((ds,i)=>{const isSat=i===5,isSun=i===6;const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);min-height:32px"></td>`;}).join('')}
+        ${strs.map((ds,i)=>{
+          const isSat=i===5,isSun=i===6;
+          const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
+          const otherWids=getOtherAsg(ds);
+          const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);return w?`<span style="display:inline-block;background:#fef9c3;color:#854d0e;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${w.name}</span>`:''}).join('');
+          return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openOtherCellAssign('${ds}',event)">
+            ${otherChips}
+            ${otherWids.length?`<div style="margin-top:3px"><span style="font-size:10px;color:#854d0e">${otherWids.length}名</span></div>`:''}
+          </td>`;
+        }).join('')}
       </tr>
       <tr>
         <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:#fff5f5;color:#dc2626;white-space:nowrap;vertical-align:middle">未配置</td>
@@ -1206,6 +1215,50 @@ function renderAssign(){
       </tr>
     </tbody>
   </table>`;
+}
+
+// ── その他配置（localStorage管理） ──
+function loadOtherAsg(){try{return JSON.parse(localStorage.getItem('genba_other_asg')||'{}')}catch{return{}}}
+function saveOtherAsg(m){localStorage.setItem('genba_other_asg',JSON.stringify(m));}
+function getOtherAsg(date){return loadOtherAsg()[date]||[];}
+function toggleOtherAsg(date,wid){
+  const m=loadOtherAsg();
+  const list=m[date]||[];
+  const idx=list.indexOf(wid);
+  if(idx>=0)list.splice(idx,1); else list.push(wid);
+  if(list.length)m[date]=list; else delete m[date];
+  saveOtherAsg(m);
+}
+
+let cellOtherDate=null;
+function openOtherCellAssign(date,ev){
+  if(ev)ev.stopPropagation();
+  cellOtherDate=date;
+  const p=date.split('-');
+  const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
+  document.getElementById('cellAssignTitle').textContent=`その他　${d.getMonth()+1}/${d.getDate()}(${dow})`;
+  renderOtherCellWorkers();
+  // モーダルのトグル関数を切り替え
+  document.getElementById('cellAssignWorkers').dataset.mode='other';
+  openModal('cellAssignModal');
+}
+function renderOtherCellWorkers(){
+  const otherWids=getOtherAsg(cellOtherDate);
+  document.getElementById('cellAssignWorkers').innerHTML=fieldWorkers.map(w=>{
+    const on=otherWids.includes(w.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${on?'#fef9c3':'var(--bg)'};border:1px solid ${on?'#fcd34d':'var(--border)'}">
+      <span style="font-weight:${on?700:400}">${w.name}</span>
+      <button class="btn btn-sm" style="background:${on?'#ef4444':'var(--accent)'};color:#fff;padding:3px 12px" onclick="toggleOtherCellWorker(${w.id})">
+        ${on?'解除':'配置'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function toggleOtherCellWorker(wid){
+  toggleOtherAsg(cellOtherDate,wid);
+  renderOtherCellWorkers();
+  renderAssign();
 }
 
 let cellAssignTid=null,cellAssignDate=null;
