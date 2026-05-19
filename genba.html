@@ -1197,6 +1197,10 @@ function renderAssign(){
     <tbody>
       ${siteRows}
       <tr>
+        <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);white-space:nowrap;vertical-align:middle">その他</td>
+        ${strs.map((ds,i)=>{const isSat=i===5,isSun=i===6;const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);min-height:32px"></td>`;}).join('')}
+      </tr>
+      <tr>
         <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:#fff5f5;color:#dc2626;white-space:nowrap;vertical-align:middle">未配置</td>
         ${unassignedCells}
       </tr>
