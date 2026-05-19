@@ -951,7 +951,11 @@ async function toggleSiteCompleteFromDetail(){
 }
 
 // ── 日報 ──
-let editingNippoId=null,nippoWorkerIds=[];
+let editingNippoId=null,nippoWorkerIds=[],nippoIsOther=false;
+// その他日報はlocalStorageで管理
+function loadOtherNippoList(){try{return JSON.parse(localStorage.getItem('genba_other_nippo')||'[]')}catch{return[];}}
+function saveOtherNippoList(list){localStorage.setItem('genba_other_nippo',JSON.stringify(list));}
+let editingOtherNippoId=null;
 
 function openNippoFromAssign(tid,date,workerIds){
   nippoWorkerIds=workerIds;
@@ -977,8 +981,36 @@ function openNippoFromAssign(tid,date,workerIds){
   document.getElementById('nippoUnitPass').value='-';
   document.getElementById('nippoOther').value='';
   editingNippoId=null;
-  // task_idをモーダルに保持
+  editingOtherNippoId=null;
+  nippoIsOther=false;
   document.getElementById('nippoModal').dataset.tid=tid;
+  openModal('nippoModal');
+}
+
+function openNippoFromOther(date,workerIds){
+  nippoWorkerIds=workerIds;
+  nippoIsOther=true;
+  editingNippoId=null;
+  editingOtherNippoId=null;
+  document.getElementById('nippoModalTitle').textContent='日報を入力（その他）';
+  document.getElementById('nippoSiteName').textContent='その他';
+  document.getElementById('nippoDate').value=date;
+  const wopts='<option value="">選択…</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('nippoInputWorker').innerHTML=wopts;
+  document.getElementById('nippoInputWorker').value='';
+  document.getElementById('nippoWorkersDisp').innerHTML=workerIds.map(wid=>{
+    const w=fieldWorkers.find(x=>x.id===wid);
+    return w?`<span style="background:#fef9c3;color:#854d0e;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+  }).join('');
+  document.getElementById('nippoClient').value='';
+  document.getElementById('nippoContent').value='';
+  document.getElementById('nippoLocation').value='市内';
+  document.getElementById('nippoMaterial').value='自社';
+  document.getElementById('nippoTimeStart').value='';
+  document.getElementById('nippoTimeEnd').value='';
+  document.getElementById('nippoCar').value='';
+  document.getElementById('nippoUnitPass').value='-';
+  document.getElementById('nippoOther').value='';
   openModal('nippoModal');
 }
 
@@ -1008,7 +1040,40 @@ function editNippo(id){
   document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
   document.getElementById('nippoOther').value=ex.other||'';
   editingNippoId=id;
+  editingOtherNippoId=null;
+  nippoIsOther=false;
   document.getElementById('nippoModal').dataset.tid=r.task_id;
+  openModal('nippoModal');
+}
+
+function editOtherNippo(id){
+  const list=loadOtherNippoList();
+  const r=list.find(x=>x.id===id);
+  if(!r)return;
+  let ex={};try{ex=JSON.parse(r.note||'{}');}catch(e){}
+  nippoWorkerIds=ex.allWorkers||[];
+  nippoIsOther=true;
+  editingNippoId=null;
+  editingOtherNippoId=id;
+  document.getElementById('nippoModalTitle').textContent='日報を編集（その他）';
+  document.getElementById('nippoSiteName').textContent='その他';
+  const wopts='<option value="">選択…</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('nippoInputWorker').innerHTML=wopts;
+  document.getElementById('nippoDate').value=r.date;
+  document.getElementById('nippoInputWorker').value=ex.inputWorker||'';
+  document.getElementById('nippoClient').value=ex.client||'';
+  document.getElementById('nippoWorkersDisp').innerHTML=nippoWorkerIds.map(wid=>{
+    const w=fieldWorkers.find(x=>x.id===Number(wid));
+    return w?`<span style="background:#fef9c3;color:#854d0e;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+  }).join('')||'<span style="color:var(--text-muted);font-size:12px">未設定</span>';
+  document.getElementById('nippoContent').value=r.content||'';
+  document.getElementById('nippoLocation').value=ex.location||'市内';
+  document.getElementById('nippoMaterial').value=ex.material||'自社';
+  document.getElementById('nippoTimeStart').value=ex.timeStart||'';
+  document.getElementById('nippoTimeEnd').value=ex.timeEnd||'';
+  document.getElementById('nippoCar').value=ex.car||'';
+  document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
+  document.getElementById('nippoOther').value=ex.other||'';
   openModal('nippoModal');
 }
 
@@ -1029,6 +1094,20 @@ async function saveNippo(){
     allWorkers:nippoWorkerIds,
     _type:'nippo',
   };
+  if(nippoIsOther){
+    // その他日報はlocalStorageに保存
+    const list=loadOtherNippoList();
+    const content=document.getElementById('nippoContent').value.trim();
+    if(editingOtherNippoId){
+      const idx=list.findIndex(x=>x.id===editingOtherNippoId);
+      if(idx>=0)list[idx]={...list[idx],date,content,note:JSON.stringify(extra)};
+    }else{
+      list.unshift({id:Date.now(),date,content,note:JSON.stringify(extra)});
+    }
+    saveOtherNippoList(list);
+    closeModal('nippoModal');flash();renderNippo();
+    return;
+  }
   const payload={task_id:tid,date,progress:0,content:document.getElementById('nippoContent').value.trim(),note:JSON.stringify(extra)};
   if(editingNippoId){
     const{error}=await sb.from('field_work_records').update(payload).eq('id',editingNippoId);
@@ -1051,51 +1130,69 @@ async function deleteNippo(id){
   flash('削除しました');renderNippo();renderSites();
 }
 
+function deleteOtherNippo(id){
+  if(!confirm('この日報を削除しますか？'))return;
+  saveOtherNippoList(loadOtherNippoList().filter(x=>x.id!==id));
+  flash('削除しました');renderNippo();
+}
+
+function nippoCard(r,isOther=false){
+  let ex={};try{ex=JSON.parse(r.note||'{}');}catch(e){}
+  const siteName=isOther?'その他':(()=>{const t=tasks.find(x=>x.id===r.task_id);return t?(t.nameMain+(t.nameSub?` ／ ${t.nameSub}`:'')):'-';})();
+  const inputWorkerName=ex.inputWorker?(fieldWorkers.find(w=>w.id===Number(ex.inputWorker))||{}).name||'':'';
+  const allW=(ex.allWorkers||[]).map(wid=>{const w=fieldWorkers.find(x=>x.id===Number(wid));return w?w.name:''}).filter(Boolean);
+  const chipColor=isOther?'background:#fef9c3;color:#854d0e':'background:#dbeafe;color:#1d4ed8';
+  const badges=[];
+  if(ex.location)badges.push(`<span class="badge blue">${ex.location}</span>`);
+  if(ex.material&&ex.material!=='自社')badges.push(`<span class="badge">${ex.material}</span>`);
+  if(ex.timeStart||ex.timeEnd)badges.push(`<span class="badge green">⏱ ${ex.timeStart||'?'}〜${ex.timeEnd||'?'}</span>`);
+  if(ex.car)badges.push(`<span class="badge">🚗 ${ex.car}</span>`);
+  if(ex.unitPass&&ex.unitPass!=='-')badges.push(`<span class="badge ${ex.unitPass==='○'?'green':'red'}">ユニット ${ex.unitPass}</span>`);
+  if(ex.client)badges.push(`<span class="badge amber">${ex.client}</span>`);
+  const editBtn=isOther?`onclick="editOtherNippo(${r.id})"`:`onclick="editNippo(${r.id})"`;
+  const delBtn=isOther?`onclick="deleteOtherNippo(${r.id})"`:`onclick="deleteNippo(${r.id})"`;
+  return`<div style="background:var(--surface);border:1px solid ${isOther?'#fcd34d':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:${isOther?'#92400e':'var(--accent)'}">${siteName}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span style="font-size:13px;font-weight:700">${fmt(r.date)}</span>
+          ${inputWorkerName?`<span style="font-size:12px;color:#7c3aed;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:20px;padding:2px 8px">入力者: ${inputWorkerName}</span>`:''}
+        </div>
+        ${allW.length?`<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${allW.map(n=>`<span style="${chipColor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">👤 ${n}</span>`).join('')}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="btn btn-secondary btn-sm" ${editBtn}>編集</button>
+        <button class="btn btn-danger btn-sm" ${delBtn}>削除</button>
+      </div>
+    </div>
+    ${r.content?`<div style="font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.6;background:var(--surface2);padding:8px 10px;border-radius:6px">${r.content}</div>`:''}
+    ${badges.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${badges.join('')}</div>`:''}
+    ${ex.other?`<div style="margin-top:6px;font-size:12px;color:var(--text-muted)">備考: ${ex.other}</div>`:''}
+  </div>`;
+}
+
 function renderNippo(){
   const el=document.getElementById('nippoList');
   if(!el)return;
   const siteFilter=document.getElementById('nippoSiteSel')?.value;
   const monthFilter=document.getElementById('nippoMonth')?.value;
-  // _type:'nippo' のレコードのみ表示
+  // 現場日報（Supabase）
   let recs=workRecords.filter(r=>{
     try{const ex=JSON.parse(r.note||'{}');return ex._type==='nippo';}catch{return false;}
-  }).sort((a,b)=>b.date.localeCompare(a.date));
+  });
   if(siteFilter)recs=recs.filter(r=>String(r.task_id)===siteFilter);
   if(monthFilter)recs=recs.filter(r=>r.date.startsWith(monthFilter));
-  if(!recs.length){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>日報がありません</div>';return;}
-  el.innerHTML=recs.map(r=>{
-    let ex={};try{ex=JSON.parse(r.note||'{}');}catch(e){}
-    const t=tasks.find(x=>x.id===r.task_id);
-    const siteName=t?(t.nameMain+(t.nameSub?` ／ ${t.nameSub}`:'')):'-';
-    const inputWorkerName=ex.inputWorker?(fieldWorkers.find(w=>w.id===Number(ex.inputWorker))||{}).name||'':'';
-    const allW=(ex.allWorkers||[]).map(wid=>{const w=fieldWorkers.find(x=>x.id===Number(wid));return w?w.name:''}).filter(Boolean);
-    const badges=[];
-    if(ex.location)badges.push(`<span class="badge blue">${ex.location}</span>`);
-    if(ex.material&&ex.material!=='自社')badges.push(`<span class="badge">${ex.material}</span>`);
-    if(ex.timeStart||ex.timeEnd)badges.push(`<span class="badge green">⏱ ${ex.timeStart||'?'}〜${ex.timeEnd||'?'}</span>`);
-    if(ex.car)badges.push(`<span class="badge">🚗 ${ex.car}</span>`);
-    if(ex.unitPass&&ex.unitPass!=='-')badges.push(`<span class="badge ${ex.unitPass==='○'?'green':'red'}">ユニット ${ex.unitPass}</span>`);
-    if(ex.client)badges.push(`<span class="badge amber">${ex.client}</span>`);
-    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <div>
-          <div style="font-size:13px;font-weight:800;color:var(--accent)">${siteName}</div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
-            <span style="font-size:13px;font-weight:700">${fmt(r.date)}</span>
-            ${inputWorkerName?`<span style="font-size:12px;color:#7c3aed;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:20px;padding:2px 8px">入力者: ${inputWorkerName}</span>`:''}
-          </div>
-          ${allW.length?`<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${allW.map(n=>`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">👤 ${n}</span>`).join('')}</div>`:''}
-        </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="btn btn-secondary btn-sm" onclick="editNippo(${r.id})">編集</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteNippo(${r.id})">削除</button>
-        </div>
-      </div>
-      ${r.content?`<div style="font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.6;background:var(--surface2);padding:8px 10px;border-radius:6px">${r.content}</div>`:''}
-      ${badges.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${badges.join('')}</div>`:''}
-      ${ex.other?`<div style="margin-top:6px;font-size:12px;color:var(--text-muted)">備考: ${ex.other}</div>`:''}
-    </div>`;
-  }).join('');
+  // その他日報（localStorage）— サイトフィルタ選択中は非表示
+  let otherRecs=siteFilter?[]:loadOtherNippoList();
+  if(monthFilter)otherRecs=otherRecs.filter(r=>r.date.startsWith(monthFilter));
+  // 合わせてソート
+  const all=[
+    ...recs.map(r=>({r,isOther:false})),
+    ...otherRecs.map(r=>({r,isOther:true})),
+  ].sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  if(!all.length){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>日報がありません</div>';return;}
+  el.innerHTML=all.map(({r,isOther})=>nippoCard(r,isOther)).join('');
 }
 
 // ── 作業配置（週間グリッド） ──
@@ -1205,7 +1302,10 @@ function renderAssign(){
           const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);return w?`<span style="display:inline-block;background:#fef9c3;color:#854d0e;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${w.name}</span>`:''}).join('');
           return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openOtherCellAssign('${ds}',event)">
             ${otherChips}
-            ${otherWids.length?`<div style="margin-top:3px"><span style="font-size:10px;color:#854d0e">${otherWids.length}名</span></div>`:''}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+              <span style="font-size:10px;color:${otherWids.length?'#854d0e':'var(--border)'}">${otherWids.length?otherWids.length+'名':''}</span>
+              ${otherWids.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromOther('${ds}',[${otherWids.join(',')}])">日報</button>`:''}
+            </div>
           </td>`;
         }).join('')}
       </tr>
