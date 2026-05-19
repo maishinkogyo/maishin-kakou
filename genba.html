@@ -151,6 +151,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="sidebar-nav">
         <button class="nav-btn active" onclick="showPage('sites')" id="nav-sites"><span>🏗️</span> 現場一覧</button>
         <button class="nav-btn" onclick="showPage('assign')" id="nav-assign"><span>👷</span> 作業配置</button>
+        <button class="nav-btn" onclick="showPage('nippo')" id="nav-nippo"><span>📝</span> 日報集計</button>
         <button class="nav-btn" onclick="showPage('costs')" id="nav-costs"><span>💰</span> 原価管理</button>
         <button class="nav-btn" onclick="showPage('settings')" id="nav-settings"><span>⚙️</span> 設定</button>
       </div>
@@ -190,6 +191,23 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         </div>
         <div id="assignBanner" style="margin-top:8px"></div>
         <div id="assignBoard" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- 日報集計 -->
+      <div class="page" id="page-nippo">
+        <div class="page-title">日報集計</div>
+        <div class="page-desc">作業配置から入力された日報の一覧・集計</div>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+          <div class="form-group" style="min-width:180px;margin:0">
+            <select id="nippoSiteSel" onchange="renderNippo()">
+              <option value="">全現場</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <input type="month" id="nippoMonth" onchange="renderNippo()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px">
+          </div>
+        </div>
+        <div id="nippoList" style="margin-top:12px"></div>
       </div>
 
       <!-- 原価管理 -->
@@ -247,6 +265,47 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     <div id="cellAssignWorkers" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('cellAssignModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日報入力モーダル -->
+<div class="modal-overlay" id="nippoModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="nippoModalTitle">日報を入力</div>
+    <div id="nippoSiteName" style="font-size:16px;font-weight:800;color:var(--accent);margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:4px solid var(--accent)"></div>
+    <div class="form-row">
+      <div class="form-group" style="max-width:180px"><label>日付</label><input type="date" id="nippoDate"></div>
+      <div class="form-group"><label>入力者</label><select id="nippoInputWorker"><option value="">選択…</option></select></div>
+      <div class="form-group"><label>請け会社名</label><input type="text" id="nippoClient" placeholder="会社名"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>作業員</label>
+      <div id="nippoWorkersDisp" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);min-height:36px"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px"><label>作業内容</label><textarea id="nippoContent" rows="3" placeholder="本日の作業内容…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>施工場所</label>
+        <select id="nippoLocation"><option value="市内">市内</option><option value="米子〜">米子〜</option><option value="その他">その他</option></select>
+      </div>
+      <div class="form-group"><label>材料</label>
+        <select id="nippoMaterial"><option value="自社">自社</option><option value="支給材">支給材</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>作業時間 開始</label><input type="time" id="nippoTimeStart"></div>
+      <div class="form-group"><label>作業時間 終了</label><input type="time" id="nippoTimeEnd"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>使用車両</label><input type="text" id="nippoCar" placeholder="車両名"></div>
+      <div class="form-group"><label>ユニット合否</label>
+        <select id="nippoUnitPass"><option value="-">-</option><option value="○">○</option><option value="×">×</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>その他・備考</label><input type="text" id="nippoOther" placeholder=""></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('nippoModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveNippo()">保存</button>
     </div>
   </div>
 </div>
@@ -473,6 +532,7 @@ async function initApp(){
   populateSelects();
   renderSites();
   renderAssign();
+  renderNippo();
   renderCosts();
   renderWorkers();
 }
@@ -490,6 +550,13 @@ function populateSelects(){
     sel.innerHTML='<option value="">現場を選択…</option>'+active.map(t=>`<option value="${t.id}">${taskName(t)}</option>`).join('');
     if(prev)sel.value=prev;
   });
+  // 日報集計フィルタ（全現場）
+  const nippoSel=document.getElementById('nippoSiteSel');
+  if(nippoSel){
+    const prev=nippoSel.value;
+    nippoSel.innerHTML='<option value="">全現場</option>'+tasks.map(t=>`<option value="${t.id}">${taskName(t)}</option>`).join('');
+    if(prev)nippoSel.value=prev;
+  }
 }
 
 function cumulativeKg(tid){
@@ -879,6 +946,153 @@ async function toggleSiteCompleteFromDetail(){
   document.getElementById('sdBadges').innerHTML=badges.join('');
 }
 
+// ── 日報 ──
+let editingNippoId=null,nippoWorkerIds=[];
+
+function openNippoFromAssign(tid,date,workerIds){
+  nippoWorkerIds=workerIds;
+  const t=tasks.find(x=>x.id===tid);
+  document.getElementById('nippoModalTitle').textContent='日報を入力';
+  document.getElementById('nippoSiteName').textContent=t?(t.nameMain+(t.nameSub?` ／ ${t.nameSub}`:'')):'' ;
+  document.getElementById('nippoDate').value=date;
+  const wopts='<option value="">選択…</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('nippoInputWorker').innerHTML=wopts;
+  document.getElementById('nippoInputWorker').value='';
+  // 作業員チップ
+  document.getElementById('nippoWorkersDisp').innerHTML=workerIds.map(wid=>{
+    const w=fieldWorkers.find(x=>x.id===wid);
+    return w?`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+  }).join('');
+  document.getElementById('nippoContent').value='';
+  document.getElementById('nippoLocation').value='市内';
+  document.getElementById('nippoMaterial').value='自社';
+  document.getElementById('nippoTimeStart').value='';
+  document.getElementById('nippoTimeEnd').value='';
+  document.getElementById('nippoCar').value='';
+  document.getElementById('nippoUnitPass').value='-';
+  document.getElementById('nippoOther').value='';
+  editingNippoId=null;
+  // task_idをモーダルに保持
+  document.getElementById('nippoModal').dataset.tid=tid;
+  openModal('nippoModal');
+}
+
+function editNippo(id){
+  const r=workRecords.find(x=>x.id===id);
+  if(!r)return;
+  let ex={};try{ex=JSON.parse(r.note||'{}');}catch(e){}
+  const t=tasks.find(x=>x.id===r.task_id);
+  nippoWorkerIds=ex.allWorkers||[];
+  document.getElementById('nippoModalTitle').textContent='日報を編集';
+  document.getElementById('nippoSiteName').textContent=t?(t.nameMain+(t.nameSub?` ／ ${t.nameSub}`:'')):'' ;
+  const wopts='<option value="">選択…</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('nippoInputWorker').innerHTML=wopts;
+  document.getElementById('nippoDate').value=r.date;
+  document.getElementById('nippoInputWorker').value=ex.inputWorker||'';
+  document.getElementById('nippoClient').value=ex.client||'';
+  document.getElementById('nippoWorkersDisp').innerHTML=nippoWorkerIds.map(wid=>{
+    const w=fieldWorkers.find(x=>x.id===Number(wid));
+    return w?`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+  }).join('')||'<span style="color:var(--text-muted);font-size:12px">未設定</span>';
+  document.getElementById('nippoContent').value=r.content||'';
+  document.getElementById('nippoLocation').value=ex.location||'市内';
+  document.getElementById('nippoMaterial').value=ex.material||'自社';
+  document.getElementById('nippoTimeStart').value=ex.timeStart||'';
+  document.getElementById('nippoTimeEnd').value=ex.timeEnd||'';
+  document.getElementById('nippoCar').value=ex.car||'';
+  document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
+  document.getElementById('nippoOther').value=ex.other||'';
+  editingNippoId=id;
+  document.getElementById('nippoModal').dataset.tid=r.task_id;
+  openModal('nippoModal');
+}
+
+async function saveNippo(){
+  const tid=Number(document.getElementById('nippoModal').dataset.tid);
+  const date=document.getElementById('nippoDate').value;
+  if(!date){alert('日付を入力してください');return;}
+  const extra={
+    inputWorker:document.getElementById('nippoInputWorker').value,
+    client:document.getElementById('nippoClient').value,
+    location:document.getElementById('nippoLocation').value,
+    material:document.getElementById('nippoMaterial').value,
+    timeStart:document.getElementById('nippoTimeStart').value,
+    timeEnd:document.getElementById('nippoTimeEnd').value,
+    car:document.getElementById('nippoCar').value,
+    unitPass:document.getElementById('nippoUnitPass').value,
+    other:document.getElementById('nippoOther').value,
+    allWorkers:nippoWorkerIds,
+    _type:'nippo',
+  };
+  const payload={task_id:tid,date,progress:0,content:document.getElementById('nippoContent').value.trim(),note:JSON.stringify(extra)};
+  if(editingNippoId){
+    const{error}=await sb.from('field_work_records').update(payload).eq('id',editingNippoId);
+    if(error){alert('エラー: '+error.message);return;}
+    const idx=workRecords.findIndex(r=>r.id===editingNippoId);
+    workRecords[idx]={...workRecords[idx],...payload};
+  }else{
+    const{data,error}=await sb.from('field_work_records').insert(payload).select().single();
+    if(error){alert('エラー: '+error.message);return;}
+    workRecords.unshift(data);
+  }
+  closeModal('nippoModal');flash();renderNippo();renderSites();
+}
+
+async function deleteNippo(id){
+  if(!confirm('この日報を削除しますか？'))return;
+  const{error}=await sb.from('field_work_records').delete().eq('id',id);
+  if(error){alert('エラー: '+error.message);return;}
+  workRecords=workRecords.filter(r=>r.id!==id);
+  flash('削除しました');renderNippo();renderSites();
+}
+
+function renderNippo(){
+  const el=document.getElementById('nippoList');
+  if(!el)return;
+  const siteFilter=document.getElementById('nippoSiteSel')?.value;
+  const monthFilter=document.getElementById('nippoMonth')?.value;
+  // _type:'nippo' のレコードのみ表示
+  let recs=workRecords.filter(r=>{
+    try{const ex=JSON.parse(r.note||'{}');return ex._type==='nippo';}catch{return false;}
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+  if(siteFilter)recs=recs.filter(r=>String(r.task_id)===siteFilter);
+  if(monthFilter)recs=recs.filter(r=>r.date.startsWith(monthFilter));
+  if(!recs.length){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>日報がありません</div>';return;}
+  el.innerHTML=recs.map(r=>{
+    let ex={};try{ex=JSON.parse(r.note||'{}');}catch(e){}
+    const t=tasks.find(x=>x.id===r.task_id);
+    const siteName=t?(t.nameMain+(t.nameSub?` ／ ${t.nameSub}`:'')):'-';
+    const inputWorkerName=ex.inputWorker?(fieldWorkers.find(w=>w.id===Number(ex.inputWorker))||{}).name||'':'';
+    const allW=(ex.allWorkers||[]).map(wid=>{const w=fieldWorkers.find(x=>x.id===Number(wid));return w?w.name:''}).filter(Boolean);
+    const badges=[];
+    if(ex.location)badges.push(`<span class="badge blue">${ex.location}</span>`);
+    if(ex.material&&ex.material!=='自社')badges.push(`<span class="badge">${ex.material}</span>`);
+    if(ex.timeStart||ex.timeEnd)badges.push(`<span class="badge green">⏱ ${ex.timeStart||'?'}〜${ex.timeEnd||'?'}</span>`);
+    if(ex.car)badges.push(`<span class="badge">🚗 ${ex.car}</span>`);
+    if(ex.unitPass&&ex.unitPass!=='-')badges.push(`<span class="badge ${ex.unitPass==='○'?'green':'red'}">ユニット ${ex.unitPass}</span>`);
+    if(ex.client)badges.push(`<span class="badge amber">${ex.client}</span>`);
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--accent)">${siteName}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <span style="font-size:13px;font-weight:700">${fmt(r.date)}</span>
+            ${inputWorkerName?`<span style="font-size:12px;color:#7c3aed;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:20px;padding:2px 8px">入力者: ${inputWorkerName}</span>`:''}
+          </div>
+          ${allW.length?`<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${allW.map(n=>`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">👤 ${n}</span>`).join('')}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-secondary btn-sm" onclick="editNippo(${r.id})">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNippo(${r.id})">削除</button>
+        </div>
+      </div>
+      ${r.content?`<div style="font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.6;background:var(--surface2);padding:8px 10px;border-radius:6px">${r.content}</div>`:''}
+      ${badges.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${badges.join('')}</div>`:''}
+      ${ex.other?`<div style="margin-top:6px;font-size:12px;color:var(--text-muted)">備考: ${ex.other}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 // ── 作業配置（週間グリッド） ──
 let weekOffset=0;
 const DAY_NAMES=['月','火','水','木','金','土','日'];
@@ -940,9 +1154,13 @@ function renderAssign(){
         const w=fieldWorkers.find(x=>x.id===a.worker_id);
         return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
       }).join('');
+      const wids=asgList.map(a=>a.worker_id);
       return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
         ${chips}
-        ${asgList.length?`<div style="margin-top:3px"><span style="font-size:10px;color:#2563eb">${asgList.length}名</span></div>`:''}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+          <span style="font-size:10px;color:${asgList.length?'#2563eb':'var(--border)'}">${asgList.length?asgList.length+'名':''}</span>
+          ${asgList.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromAssign(${t.id},'${ds}',[${wids.join(',')}])">日報</button>`:''}
+        </div>
       </td>`;
     }).join('');
     return`<tr>
