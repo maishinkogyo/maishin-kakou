@@ -382,14 +382,98 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 
 <!-- 作業日報モーダル -->
 <div class="modal-overlay" id="worklogModal">
-  <div class="modal">
+  <div class="modal" style="max-width:640px">
     <div class="modal-title" id="wlModalTitle">作業日報を追加</div>
+
+    <!-- 基本情報 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">基本情報</div>
     <div class="form-row">
       <div class="form-group" style="max-width:180px"><label>日付</label><input type="date" id="wlDate"></div>
-      <div class="form-group" style="max-width:120px"><label>進捗（%）</label><input type="number" id="wlProgress" min="0" max="100" value="0"></div>
+      <div class="form-group"><label>担当者</label><select id="wlWorker"><option value="">選択…</option></select></div>
+      <div class="form-group"><label>請け会社名</label><input type="text" id="wlClient" placeholder="会社名"></div>
     </div>
-    <div class="form-group" style="margin-bottom:12px"><label>作業内容</label><textarea id="wlContent" rows="3" placeholder="本日の作業内容…"></textarea></div>
-    <div class="form-group" style="margin-bottom:12px"><label>メモ</label><input type="text" id="wlNote" placeholder="任意"></div>
+
+    <!-- 作業内容 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">作業内容</div>
+    <div class="form-group" style="margin-bottom:10px"><label>作業内容</label><textarea id="wlContent" rows="3" placeholder="本日の作業内容…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>ユニット工事 合否</label>
+        <select id="wlUnitPass"><option value="-">-</option><option value="○">○</option><option value="×">×</option></select>
+      </div>
+      <div class="form-group"><label>施工場所</label>
+        <select id="wlLocation"><option value="市内">市内</option><option value="米子〜">米子〜</option><option value="その他">その他</option></select>
+      </div>
+      <div class="form-group"><label>組み or 運搬のみ</label>
+        <select id="wlWorkType"><option value="-">-</option><option value="組み">組み</option><option value="運搬のみ">運搬のみ</option></select>
+      </div>
+    </div>
+
+    <!-- 材料 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">材料</div>
+    <div class="form-row">
+      <div class="form-group"><label>材料</label>
+        <select id="wlMaterial"><option value="自社">自社</option><option value="支給材">支給材</option></select>
+      </div>
+      <div class="form-group"><label>持ち込んだもの</label><input type="text" id="wlBrought" placeholder=""></div>
+      <div class="form-group"><label>購入品</label><input type="text" id="wlPurchased" placeholder=""></div>
+    </div>
+
+    <!-- 時間 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">時間</div>
+    <div class="form-row">
+      <div class="form-group"><label>作業時間 開始</label><input type="time" id="wlTimeStart"></div>
+      <div class="form-group"><label>作業時間 終了</label><input type="time" id="wlTimeEnd"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>行き 会社発</label><input type="time" id="wlLeaveCompany"></div>
+      <div class="form-group"><label>行き 現場着</label><input type="time" id="wlArriveSite"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>帰り 現場発</label><input type="time" id="wlLeaveSite"></div>
+      <div class="form-group"><label>帰り 会社着</label><input type="time" id="wlArriveCompany"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>拾い残業時間</label><input type="text" id="wlOvertime" placeholder="例：1h"></div>
+      <div class="form-group"><label>残業した人</label><input type="text" id="wlOvertimeWho" placeholder="氏名"></div>
+    </div>
+
+    <!-- 人員・応援 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">人員・応援</div>
+    <div class="form-row">
+      <div class="form-group"><label>人員 通い 行き</label><input type="number" id="wlStay0Go" min="0" placeholder="0"></div>
+      <div class="form-group"><label>人員 通い 帰り</label><input type="number" id="wlStay0Return" min="0" placeholder="0"></div>
+      <div class="form-group"><label>人員 泊まり 行き</label><input type="number" id="wlStay1Go" min="0" placeholder="0"></div>
+      <div class="form-group"><label>人員 泊まり 帰り</label><input type="number" id="wlStay1Return" min="0" placeholder="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>応援 通い</label><input type="number" id="wlSup0" min="0" placeholder="0"></div>
+      <div class="form-group"><label>応援 泊まり</label><input type="number" id="wlSup1" min="0" placeholder="0"></div>
+    </div>
+
+    <!-- 車両 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">車両</div>
+    <div class="form-row">
+      <div class="form-group"><label>使用車両</label><input type="text" id="wlCar1" placeholder="車両名"></div>
+      <div class="form-group"><label>運転手</label><select id="wlDriver1"><option value="">選択…</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>運搬車両</label><input type="text" id="wlCar2" placeholder="車両名"></div>
+      <div class="form-group"><label>運転手</label><select id="wlDriver2"><option value="">選択…</option></select></div>
+    </div>
+
+    <!-- 自主検査・その他 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:4px">自主検査・その他</div>
+    <div class="form-row">
+      <div class="form-group"><label>自主検査提出</label>
+        <select id="wlInspection"><option value="-">-</option><option value="○">○</option><option value="×">×</option></select>
+      </div>
+      <div class="form-group"><label>自主検査枚数</label><input type="number" id="wlInspectionCount" min="0" placeholder="0"></div>
+      <div class="form-group"><label>応援○×</label>
+        <select id="wlSupportOX"><option value="-">-</option><option value="○">○</option><option value="×">×</option></select>
+      </div>
+      <div class="form-group"><label>その他</label><input type="text" id="wlOther" placeholder=""></div>
+    </div>
+
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('worklogModal')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveWorklog()">保存</button>
@@ -919,16 +1003,40 @@ function renderWorklog(){
   if(!tid){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>現場を選択してください</div>';return;}
   const recs=workRecords.filter(r=>r.task_id===tid).sort((a,b)=>b.date.localeCompare(a.date));
   if(!recs.length){el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>記録がありません</div>';return;}
-  el.innerHTML=`<table class="data-table"><thead><tr><th>日付</th><th>進捗</th><th>作業内容</th><th>メモ</th><th></th></tr></thead><tbody>`+
-    recs.map(r=>`<tr>
-      <td style="white-space:nowrap">${fmt(r.date)}</td>
-      <td><span style="font-weight:700;color:var(--accent)">${r.progress}%</span></td>
-      <td>${r.content||''}</td>
-      <td style="color:var(--text-muted)">${r.note||''}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-secondary btn-sm" onclick="editWorklog(${r.id})" style="margin-right:4px">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWorklog(${r.id})">削除</button>
-      </td></tr>`).join('')+'</tbody></table>';
+  el.innerHTML=recs.map(r=>{
+    let extra={};
+    try{extra=JSON.parse(r.note||'{}');}catch(e){}
+    const workerName=extra.worker?(fieldWorkers.find(w=>w.id===Number(extra.worker))||{name:extra.worker}).name||extra.worker:'';
+    const badges=[];
+    if(extra.location)badges.push(`<span class="badge blue">${extra.location}</span>`);
+    if(extra.workType&&extra.workType!=='-')badges.push(`<span class="badge">${extra.workType}</span>`);
+    if(extra.material)badges.push(`<span class="badge">${extra.material}</span>`);
+    if(extra.timeStart||extra.timeEnd)badges.push(`<span class="badge green">⏱ ${extra.timeStart||'?'}〜${extra.timeEnd||'?'}</span>`);
+    if(extra.client)badges.push(`<span class="badge amber">${extra.client}</span>`);
+    if(extra.car1)badges.push(`<span class="badge">🚗 ${extra.car1}</span>`);
+    if(extra.unitPass&&extra.unitPass!=='-')badges.push(`<span class="badge ${extra.unitPass==='○'?'green':'red'}">ユニット ${extra.unitPass}</span>`);
+    if(extra.inspection&&extra.inspection!=='-')badges.push(`<span class="badge ${extra.inspection==='○'?'green':'red'}">自主検査 ${extra.inspection}</span>`);
+    const stayInfo=[];
+    if(extra.stay0Go)stayInfo.push(`通い行${extra.stay0Go}`);
+    if(extra.stay0Return)stayInfo.push(`帰${extra.stay0Return}`);
+    if(extra.stay1Go)stayInfo.push(`泊行${extra.stay1Go}`);
+    if(extra.stay1Return)stayInfo.push(`帰${extra.stay1Return}`);
+    if(stayInfo.length)badges.push(`<span class="badge">👷 ${stayInfo.join(' ')}</span>`);
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:14px;font-weight:700">${fmt(r.date)}</span>
+          ${workerName?`<span style="font-size:13px;font-weight:600;color:#7c3aed;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:20px;padding:2px 10px">👤 ${workerName}</span>`:''}
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-secondary btn-sm" onclick="editWorklog(${r.id})">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteWorklog(${r.id})">削除</button>
+        </div>
+      </div>
+      ${r.content?`<div style="font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.6">${r.content}</div>`:''}
+      ${badges.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${badges.join('')}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 function openWorklogModal(id=null){
@@ -936,17 +1044,80 @@ function openWorklogModal(id=null){
   if(!tid){alert('先に現場を選択してください');return;}
   editingWlId=id;
   document.getElementById('wlModalTitle').textContent=id?'作業日報を編集':'作業日報を追加';
+  // workerとdriverのselectを再生成
+  const workerOpts='<option value="">選択…</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('wlWorker').innerHTML=workerOpts;
+  document.getElementById('wlDriver1').innerHTML=workerOpts;
+  document.getElementById('wlDriver2').innerHTML=workerOpts;
   if(id){
     const r=workRecords.find(x=>x.id===id);
+    let ex={};
+    try{ex=JSON.parse(r.note||'{}');}catch(e){}
     document.getElementById('wlDate').value=r.date;
-    document.getElementById('wlProgress').value=r.progress;
+    document.getElementById('wlWorker').value=ex.worker||'';
+    document.getElementById('wlClient').value=ex.client||'';
     document.getElementById('wlContent').value=r.content||'';
-    document.getElementById('wlNote').value=r.note||'';
+    document.getElementById('wlUnitPass').value=ex.unitPass||'-';
+    document.getElementById('wlLocation').value=ex.location||'市内';
+    document.getElementById('wlWorkType').value=ex.workType||'-';
+    document.getElementById('wlMaterial').value=ex.material||'自社';
+    document.getElementById('wlBrought').value=ex.brought||'';
+    document.getElementById('wlPurchased').value=ex.purchased||'';
+    document.getElementById('wlTimeStart').value=ex.timeStart||'';
+    document.getElementById('wlTimeEnd').value=ex.timeEnd||'';
+    document.getElementById('wlLeaveCompany').value=ex.leaveCompany||'';
+    document.getElementById('wlArriveSite').value=ex.arriveSite||'';
+    document.getElementById('wlLeaveSite').value=ex.leaveSite||'';
+    document.getElementById('wlArriveCompany').value=ex.arriveCompany||'';
+    document.getElementById('wlOvertime').value=ex.overtime||'';
+    document.getElementById('wlOvertimeWho').value=ex.overtimeWho||'';
+    document.getElementById('wlStay0Go').value=ex.stay0Go||'';
+    document.getElementById('wlStay0Return').value=ex.stay0Return||'';
+    document.getElementById('wlStay1Go').value=ex.stay1Go||'';
+    document.getElementById('wlStay1Return').value=ex.stay1Return||'';
+    document.getElementById('wlSup0').value=ex.sup0||'';
+    document.getElementById('wlSup1').value=ex.sup1||'';
+    document.getElementById('wlCar1').value=ex.car1||'';
+    document.getElementById('wlDriver1').value=ex.driver1||'';
+    document.getElementById('wlCar2').value=ex.car2||'';
+    document.getElementById('wlDriver2').value=ex.driver2||'';
+    document.getElementById('wlInspection').value=ex.inspection||'-';
+    document.getElementById('wlInspectionCount').value=ex.inspectionCount||'';
+    document.getElementById('wlSupportOX').value=ex.supportOX||'-';
+    document.getElementById('wlOther').value=ex.other||'';
   }else{
     document.getElementById('wlDate').value=todayStr();
-    document.getElementById('wlProgress').value=latestProgress(tid);
+    document.getElementById('wlWorker').value='';
+    document.getElementById('wlClient').value='';
     document.getElementById('wlContent').value='';
-    document.getElementById('wlNote').value='';
+    document.getElementById('wlUnitPass').value='-';
+    document.getElementById('wlLocation').value='市内';
+    document.getElementById('wlWorkType').value='-';
+    document.getElementById('wlMaterial').value='自社';
+    document.getElementById('wlBrought').value='';
+    document.getElementById('wlPurchased').value='';
+    document.getElementById('wlTimeStart').value='';
+    document.getElementById('wlTimeEnd').value='';
+    document.getElementById('wlLeaveCompany').value='';
+    document.getElementById('wlArriveSite').value='';
+    document.getElementById('wlLeaveSite').value='';
+    document.getElementById('wlArriveCompany').value='';
+    document.getElementById('wlOvertime').value='';
+    document.getElementById('wlOvertimeWho').value='';
+    document.getElementById('wlStay0Go').value='';
+    document.getElementById('wlStay0Return').value='';
+    document.getElementById('wlStay1Go').value='';
+    document.getElementById('wlStay1Return').value='';
+    document.getElementById('wlSup0').value='';
+    document.getElementById('wlSup1').value='';
+    document.getElementById('wlCar1').value='';
+    document.getElementById('wlDriver1').value='';
+    document.getElementById('wlCar2').value='';
+    document.getElementById('wlDriver2').value='';
+    document.getElementById('wlInspection').value='-';
+    document.getElementById('wlInspectionCount').value='';
+    document.getElementById('wlSupportOX').value='-';
+    document.getElementById('wlOther').value='';
   }
   openModal('worklogModal');
 }
@@ -955,11 +1126,40 @@ function editWorklog(id){openWorklogModal(id);}
 async function saveWorklog(){
   const tid=Number(document.getElementById('wlTaskSel').value);
   const date=document.getElementById('wlDate').value;
-  const progress=Number(document.getElementById('wlProgress').value);
-  const content=document.getElementById('wlContent').value.trim();
-  const note=document.getElementById('wlNote').value.trim();
   if(!date){alert('日付を入力してください');return;}
-  const payload={task_id:tid,date,progress,content,note};
+  const extra={
+    worker:document.getElementById('wlWorker').value,
+    client:document.getElementById('wlClient').value,
+    unitPass:document.getElementById('wlUnitPass').value,
+    location:document.getElementById('wlLocation').value,
+    workType:document.getElementById('wlWorkType').value,
+    material:document.getElementById('wlMaterial').value,
+    brought:document.getElementById('wlBrought').value,
+    purchased:document.getElementById('wlPurchased').value,
+    timeStart:document.getElementById('wlTimeStart').value,
+    timeEnd:document.getElementById('wlTimeEnd').value,
+    leaveCompany:document.getElementById('wlLeaveCompany').value,
+    arriveSite:document.getElementById('wlArriveSite').value,
+    leaveSite:document.getElementById('wlLeaveSite').value,
+    arriveCompany:document.getElementById('wlArriveCompany').value,
+    overtime:document.getElementById('wlOvertime').value,
+    overtimeWho:document.getElementById('wlOvertimeWho').value,
+    stay0Go:document.getElementById('wlStay0Go').value,
+    stay0Return:document.getElementById('wlStay0Return').value,
+    stay1Go:document.getElementById('wlStay1Go').value,
+    stay1Return:document.getElementById('wlStay1Return').value,
+    sup0:document.getElementById('wlSup0').value,
+    sup1:document.getElementById('wlSup1').value,
+    car1:document.getElementById('wlCar1').value,
+    driver1:document.getElementById('wlDriver1').value,
+    car2:document.getElementById('wlCar2').value,
+    driver2:document.getElementById('wlDriver2').value,
+    inspection:document.getElementById('wlInspection').value,
+    inspectionCount:document.getElementById('wlInspectionCount').value,
+    supportOX:document.getElementById('wlSupportOX').value,
+    other:document.getElementById('wlOther').value,
+  };
+  const payload={task_id:tid,date,progress:0,content:document.getElementById('wlContent').value.trim(),note:JSON.stringify(extra)};
   if(editingWlId){
     const{error}=await sb.from('field_work_records').update(payload).eq('id',editingWlId);
     if(error){alert('エラー: '+error.message);return;}
