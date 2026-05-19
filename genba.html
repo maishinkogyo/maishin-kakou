@@ -967,6 +967,7 @@ function openNippoFromAssign(tid,date,workerIds){
     const w=fieldWorkers.find(x=>x.id===wid);
     return w?`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
   }).join('');
+  document.getElementById('nippoClient').value=getTaskMeta(tid).client||'';
   document.getElementById('nippoContent').value='';
   document.getElementById('nippoLocation').value='市内';
   document.getElementById('nippoMaterial').value='自社';
