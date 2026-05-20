@@ -346,7 +346,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>作業時間 終了</label><input type="time" id="nippoTimeEnd"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>使用車両</label><input type="text" id="nippoCar" placeholder="車両名"></div>
+      <div class="form-group"><label>使用車両</label><select id="nippoCar"><option value="">未使用</option></select></div>
       <div class="form-group"><label>ユニット合否</label>
         <select id="nippoUnitPass"><option value="-">-</option><option value="○">○</option><option value="×">×</option></select>
       </div>
@@ -636,6 +636,17 @@ function populateSelects(){
     nippoSel.innerHTML='<option value="">全現場</option>'+tasks.map(t=>`<option value="${t.id}">${taskName(t)}</option>`).join('');
     if(prev)nippoSel.value=prev;
   }
+  // 使用車両プルダウン
+  populateCarSelect();
+}
+
+function populateCarSelect(selected){
+  const sel=document.getElementById('nippoCar');
+  if(!sel)return;
+  const prev=selected!==undefined?selected:sel.value;
+  const vehicles=loadVehicles();
+  sel.innerHTML='<option value="">未使用</option>'+vehicles.map(v=>`<option value="${v.name}">${v.name}${v.plate?' ('+v.plate+')':''}</option>`).join('');
+  if(prev)sel.value=prev;
 }
 
 function cumulativeKg(tid){
@@ -1051,7 +1062,7 @@ function openNippoFromAssign(tid,date,workerIds){
   document.getElementById('nippoMaterial').value='自社';
   document.getElementById('nippoTimeStart').value='';
   document.getElementById('nippoTimeEnd').value='';
-  document.getElementById('nippoCar').value='';
+  populateCarSelect('');
   document.getElementById('nippoUnitPass').value='-';
   document.getElementById('nippoOther').value='';
   editingNippoId=null;
@@ -1079,7 +1090,7 @@ function openNippoFromOther(date,workerIds){
   document.getElementById('nippoMaterial').value='自社';
   document.getElementById('nippoTimeStart').value='';
   document.getElementById('nippoTimeEnd').value='';
-  document.getElementById('nippoCar').value='';
+  populateCarSelect('');
   document.getElementById('nippoUnitPass').value='-';
   document.getElementById('nippoOther').value='';
   renderNippoWorkerToggles();openModal('nippoModal');
@@ -1109,7 +1120,7 @@ function editNippo(id){
   document.getElementById('nippoMaterial').value=ex.material||'自社';
   document.getElementById('nippoTimeStart').value=ex.timeStart||'';
   document.getElementById('nippoTimeEnd').value=ex.timeEnd||'';
-  document.getElementById('nippoCar').value=ex.car||'';
+  populateCarSelect(ex.car||'');
   document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
   document.getElementById('nippoOther').value=ex.other||'';
   editingNippoId=id;
@@ -1146,7 +1157,7 @@ function editOtherNippo(id){
   document.getElementById('nippoMaterial').value=ex.material||'自社';
   document.getElementById('nippoTimeStart').value=ex.timeStart||'';
   document.getElementById('nippoTimeEnd').value=ex.timeEnd||'';
-  document.getElementById('nippoCar').value=ex.car||'';
+  populateCarSelect(ex.car||'');
   document.getElementById('nippoUnitPass').value=ex.unitPass||'-';
   document.getElementById('nippoOther').value=ex.other||'';
   renderNippoWorkerToggles();openModal('nippoModal');
