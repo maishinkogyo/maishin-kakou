@@ -209,10 +209,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
               <option value="complete">完了済</option>
             </select>
             <div style="display:flex;align-items:center;gap:6px">
-              <button class="btn btn-secondary btn-sm" onclick="ganttMonthOffset--;renderGantt()">← 前月</button>
-              <span id="ganttMonthLabel" style="font-weight:700;font-size:14px;min-width:80px;text-align:center"></span>
-              <button class="btn btn-secondary btn-sm" onclick="ganttMonthOffset++;renderGantt()">次月 →</button>
-              <button class="btn btn-secondary btn-sm" onclick="ganttMonthOffset=0;renderGantt()">今月</button>
+              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset-=30;renderGantt()">← 前へ</button>
+              <span id="ganttMonthLabel" style="font-weight:700;font-size:14px;min-width:120px;text-align:center"></span>
+              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset+=30;renderGantt()">次へ →</button>
+              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset=0;renderGantt()">今日</button>
             </div>
           </div>
           <div id="ganttBoard" style="overflow-x:auto"></div>
@@ -1744,7 +1744,7 @@ async function deleteCost(id){
 }
 
 // ── ガントチャート ──
-let ganttMonthOffset=0;
+let ganttDayOffset=0;
 
 function switchSiteTab(name){
   ['list','gantt'].forEach(n=>{
@@ -1760,32 +1760,35 @@ function renderGantt(){
   if(filter==='active')list=tasks.filter(t=>!t.complete);
   if(filter==='complete')list=tasks.filter(t=>t.complete);
 
-  // 表示月の設定
-  const now=new Date();
-  const baseYear=now.getFullYear();
-  const baseMonth=now.getMonth();
-  const dispDate=new Date(baseYear,baseMonth+ganttMonthOffset,1);
-  const dispYear=dispDate.getFullYear();
-  const dispMonth=dispDate.getMonth();
-  const daysInMonth=new Date(dispYear,dispMonth+1,0).getDate();
-  document.getElementById('ganttMonthLabel').textContent=`${dispYear}年${dispMonth+1}月`;
-
+  const DAYS=30;
   const todayStr2=todayStr();
+  const todayD=new Date(todayStr2);
+  // 起点：今日 + offset
+  const startD=new Date(todayD);
+  startD.setDate(startD.getDate()+ganttDayOffset);
+  const endD=new Date(startD);
+  endD.setDate(endD.getDate()+DAYS-1);
+
+  // ラベル
+  const fmt2=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  document.getElementById('ganttMonthLabel').textContent=`${fmt2(startD)} 〜 ${fmt2(endD)}`;
+
   const ROW_H=40;
   const LABEL_W=140;
   const DAY_W=28;
-  const totalW=LABEL_W+DAY_W*daysInMonth;
+  const totalW=LABEL_W+DAY_W*DAYS;
 
   // ヘッダー（日付）
-  const headerDays=Array.from({length:daysInMonth},(_,i)=>{
-    const d=new Date(dispYear,dispMonth,i+1);
+  const headerDays=Array.from({length:DAYS},(_,i)=>{
+    const d=new Date(startD);
+    d.setDate(d.getDate()+i);
     const ds=localDateStr(d);
     const dow=d.getDay();
     const isToday=ds===todayStr2;
     const isSun=dow===0,isSat=dow===6;
     const bg=isToday?'var(--accent)':isSun?'#fff1f2':isSat?'#eff6ff':'var(--surface2)';
     const color=isToday?'#fff':isSun?'#dc2626':isSat?'#2563eb':'var(--text-muted)';
-    return`<div style="width:${DAY_W}px;flex-shrink:0;text-align:center;font-size:10px;font-weight:700;background:${bg};color:${color};padding:4px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border)">${i+1}<br>${['日','月','火','水','木','金','土'][dow]}</div>`;
+    return`<div style="width:${DAY_W}px;flex-shrink:0;text-align:center;font-size:10px;font-weight:700;background:${bg};color:${color};padding:4px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border)">${d.getDate()}<br>${['日','月','火','水','木','金','土'][dow]}</div>`;
   }).join('');
 
   // 各現場行
@@ -1793,51 +1796,45 @@ function renderGantt(){
     const start=t.start_date?new Date(t.start_date):null;
     const end=t.deadline?new Date(t.deadline):null;
 
-    // バーの計算（この月内にクリップ）
-    const monthStart=new Date(dispYear,dispMonth,1);
-    const monthEnd=new Date(dispYear,dispMonth,daysInMonth);
-
     let barLeft=null,barWidth=0;
     if(start||end){
-      const barS=start?new Date(Math.max(start,monthStart)):monthStart;
-      const barE=end?new Date(Math.min(end,monthEnd)):monthEnd;
-      if(barS<=monthEnd&&(!end||barE>=monthStart)){
-        barLeft=Math.floor((barS-monthStart)/(864e5))*DAY_W;
-        barWidth=Math.max(DAY_W,(Math.floor((barE-barS)/(864e5))+1)*DAY_W);
-        // はみ出し防止
-        if(barLeft+barWidth>DAY_W*daysInMonth)barWidth=DAY_W*daysInMonth-barLeft;
+      const barS=start?new Date(Math.max(start,startD)):new Date(startD);
+      const barE=end?new Date(Math.min(end,endD)):new Date(endD);
+      if((!start||start<=endD)&&(!end||end>=startD)){
+        barLeft=Math.round((barS-startD)/(864e5))*DAY_W;
+        barWidth=Math.max(DAY_W,Math.round((barE-barS)/(864e5)+1)*DAY_W);
+        if(barLeft<0){barWidth+=barLeft;barLeft=0;}
+        if(barLeft+barWidth>DAY_W*DAYS)barWidth=DAY_W*DAYS-barLeft;
       }
     }
 
-    const barColor=t.complete?'#94a3b8':t.deadline&&t.deadline<todayStr2?'#ef4444':'var(--accent)';
-    const barLabel=t.complete?'完了':t.deadline&&t.deadline<todayStr2?'超過':'';
+    const isOverdue=t.deadline&&t.deadline<todayStr2&&!t.complete;
+    const barColor=t.complete?'#94a3b8':isOverdue?'#ef4444':'var(--accent)';
+    const barLabel=t.complete?'完了':isOverdue?'超過':'';
 
-    const bar=barLeft!==null?`<div style="position:absolute;left:${barLeft}px;width:${barWidth}px;top:8px;height:24px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 6px;overflow:hidden;cursor:default;opacity:${t.complete?0.6:1}" title="${taskName(t)}${start?' 開始:'+t.start_date:''}${end?' 期限:'+t.deadline:''}">
+    const bar=barLeft!==null&&barWidth>0?`<div style="position:absolute;left:${barLeft}px;width:${barWidth}px;top:8px;height:24px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 6px;overflow:hidden;opacity:${t.complete?0.6:1}" title="${taskName(t)}${start?' 開始:'+t.start_date:''}${end?' 期限:'+t.deadline:''}">
         <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap">${barLabel}</span>
       </div>`:'';
 
-    // 今日ライン
-    const todayD=new Date(todayStr2);
-    const todayInMonth=todayD>=monthStart&&todayD<=monthEnd;
-    const todayLine=todayInMonth?`<div style="position:absolute;left:${Math.floor((todayD-monthStart)/(864e5))*DAY_W+DAY_W/2}px;top:0;bottom:0;width:2px;background:rgba(239,68,68,0.5);pointer-events:none"></div>`:'';
+    // 今日ライン（表示範囲内なら）
+    const todayInRange=todayD>=startD&&todayD<=endD;
+    const todayLine=todayInRange?`<div style="position:absolute;left:${Math.round((todayD-startD)/(864e5))*DAY_W+DAY_W/2}px;top:0;bottom:0;width:2px;background:rgba(239,68,68,0.4);pointer-events:none"></div>`:'';
 
-    // 列セル（土日色）
-    const cells=Array.from({length:daysInMonth},(_,i)=>{
-      const dow=new Date(dispYear,dispMonth,i+1).getDay();
-      const ds=localDateStr(new Date(dispYear,dispMonth,i+1));
-      const bg=ds===todayStr2?'rgba(22,163,74,0.05)':dow===0?'#fff9f9':dow===6?'#f0f7ff':'';
+    const cells=Array.from({length:DAYS},(_,i)=>{
+      const d=new Date(startD);d.setDate(d.getDate()+i);
+      const dow=d.getDay();
+      const ds=localDateStr(d);
+      const bg=ds===todayStr2?'rgba(22,163,74,0.07)':dow===0?'#fff9f9':dow===6?'#f0f7ff':'';
       return`<div style="width:${DAY_W}px;flex-shrink:0;height:${ROW_H}px;border-right:1px solid var(--border);${bg?'background:'+bg:''}"></div>`;
     }).join('');
 
     return`<div style="display:flex;border-bottom:1px solid var(--border)">
       <div style="width:${LABEL_W}px;flex-shrink:0;padding:0 8px;display:flex;align-items:center;background:var(--surface);border-right:2px solid var(--border);font-size:12px;font-weight:700;min-height:${ROW_H}px;gap:4px">
         ${t.complete?'<span style="color:#94a3b8">✓</span>':''}
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${t.complete?'var(--text-muted)':'var(--text)'}">${t.nameMain}${t.nameSub?`<span style="font-weight:400;color:var(--text-muted)"> ${t.nameSub}</span>`:''}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${t.complete?'var(--text-muted)':'var(--text)'}">${t.nameMain}${t.nameSub?`<span style="font-weight:400;color:var(--text-muted);font-size:10px"> ${t.nameSub}</span>`:''}</span>
       </div>
       <div style="position:relative;display:flex;flex:1">
-        ${cells}
-        ${bar}
-        ${todayLine}
+        ${cells}${bar}${todayLine}
       </div>
     </div>`;
   }).join('');
@@ -1849,12 +1846,10 @@ function renderGantt(){
 
   document.getElementById('ganttBoard').innerHTML=`
     <div style="display:inline-flex;flex-direction:column;min-width:${totalW}px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
-      <!-- ヘッダー -->
       <div style="display:flex;border-bottom:2px solid var(--border)">
         <div style="width:${LABEL_W}px;flex-shrink:0;background:var(--surface2);border-right:2px solid var(--border);padding:4px 8px;font-size:11px;font-weight:700;color:var(--text-muted)">現場名</div>
         <div style="display:flex">${headerDays}</div>
       </div>
-      <!-- 行 -->
       ${rows}
     </div>
     <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-muted)">
