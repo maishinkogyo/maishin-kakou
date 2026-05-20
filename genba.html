@@ -272,6 +272,14 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <div id="workerList"></div>
         </div>
 
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">🚗 車両マスタ</div>
+          <div class="toolbar" style="margin-bottom:12px">
+            <div class="spacer"></div>
+            <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 追加</button>
+          </div>
+          <div id="vehicleList"></div>
+        </div>
 
         <div class="card">
           <div class="card-title">パスワード変更</div>
@@ -497,6 +505,34 @@ input,select,textarea{font-family:inherit;font-size:14px;}
   </div>
 </div>
 
+<!-- 車両モーダル -->
+<div class="modal-overlay" id="vehicleModal">
+  <div class="modal">
+    <div class="modal-title" id="vehModalTitle">車両追加</div>
+    <div class="form-row">
+      <div class="form-group"><label>車両名</label><input type="text" id="vehName" placeholder="ハイエース・軽トラ など"></div>
+      <div class="form-group"><label>種別</label>
+        <select id="vehType">
+          <option value="乗用車">乗用車</option>
+          <option value="軽トラック">軽トラック</option>
+          <option value="2tトラック">2tトラック</option>
+          <option value="4tトラック">4tトラック</option>
+          <option value="バン">バン</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ナンバー</label><input type="text" id="vehPlate" placeholder="鳥取 500 あ 1234"></div>
+      <div class="form-group"><label>メモ</label><input type="text" id="vehNote" placeholder="任意"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('vehicleModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div id="flash">保存しました</div>
 
 <script>
@@ -571,6 +607,7 @@ async function initApp(){
   renderNippo();
   renderCosts();
   renderWorkers();
+  renderVehicles();
 }
 
 // ── Helpers ──
@@ -1725,6 +1762,82 @@ async function deleteWorker(id){
   if(error){alert('エラー: '+error.message);return;}
   fieldWorkers=fieldWorkers.filter(w=>w.id!==id);
   flash();renderWorkers();populateSelects();
+}
+
+
+// ── 車両マスタ（localStorage管理） ──
+const VEHICLES_KEY='genba_vehicles';
+let editingVehicleId=null;
+
+function loadVehicles(){try{return JSON.parse(localStorage.getItem(VEHICLES_KEY)||'[]');}catch{return[];}}
+function saveVehicles(list){localStorage.setItem(VEHICLES_KEY,JSON.stringify(list));}
+
+function renderVehicles(){
+  const list=loadVehicles();
+  const el=document.getElementById('vehicleList');
+  if(!list.length){
+    el.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">🚗</div>車両が登録されていません</div>';
+    return;
+  }
+  el.innerHTML=`<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>メモ</th><th></th></tr></thead><tbody>`+
+    list.map(v=>`<tr>
+      <td style="font-weight:700">${v.name}</td>
+      <td>${v.type||'－'}</td>
+      <td style="color:var(--text-muted)">${v.plate||'－'}</td>
+      <td style="color:var(--text-muted)">${v.note||''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')" style="margin-right:4px">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${v.id}')">削除</button>
+      </td></tr>`).join('')+'</tbody></table>';
+}
+
+function openVehicleModal(){
+  editingVehicleId=null;
+  document.getElementById('vehModalTitle').textContent='車両追加';
+  document.getElementById('vehName').value='';
+  document.getElementById('vehType').value='乗用車';
+  document.getElementById('vehPlate').value='';
+  document.getElementById('vehNote').value='';
+  openModal('vehicleModal');
+}
+
+function editVehicle(id){
+  editingVehicleId=id;
+  const v=loadVehicles().find(x=>x.id===id);
+  if(!v)return;
+  document.getElementById('vehModalTitle').textContent='車両を編集';
+  document.getElementById('vehName').value=v.name;
+  document.getElementById('vehType').value=v.type||'乗用車';
+  document.getElementById('vehPlate').value=v.plate||'';
+  document.getElementById('vehNote').value=v.note||'';
+  openModal('vehicleModal');
+}
+
+function saveVehicle(){
+  const name=document.getElementById('vehName').value.trim();
+  if(!name){alert('車両名を入力してください');return;}
+  const payload={
+    name,
+    type:document.getElementById('vehType').value,
+    plate:document.getElementById('vehPlate').value.trim(),
+    note:document.getElementById('vehNote').value.trim(),
+  };
+  const list=loadVehicles();
+  if(editingVehicleId){
+    const idx=list.findIndex(v=>v.id===editingVehicleId);
+    if(idx>=0)list[idx]={...list[idx],...payload};
+  }else{
+    payload.id='veh_'+Date.now();
+    list.push(payload);
+  }
+  saveVehicles(list);
+  closeModal('vehicleModal');flash();renderVehicles();
+}
+
+function deleteVehicle(id){
+  if(!confirm('この車両を削除しますか？'))return;
+  saveVehicles(loadVehicles().filter(v=>v.id!==id));
+  flash();renderVehicles();
 }
 
 
