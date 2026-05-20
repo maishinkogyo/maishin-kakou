@@ -1096,7 +1096,7 @@ function editOtherNippo(id){
   document.getElementById('nippoClient').value=ex.client||'';
   document.getElementById('nippoWorkersDisp').innerHTML=nippoWorkerIds.map(wid=>{
     const w=fieldWorkers.find(x=>x.id===Number(wid));
-    return w?`<span style="background:#fef9c3;color:#854d0e;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
+    return w?`<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`:'';
   }).join('')||'<span style="color:var(--text-muted);font-size:12px">未設定</span>';
   document.getElementById('nippoContent').value=r.content||'';
   document.getElementById('nippoLocation').value=ex.location||'市内';
@@ -1175,7 +1175,7 @@ function renderNippoWorkerToggles(){
   if(!el)return;
   const isOther=nippoIsOther;
   const accentOn=isOther?'#92400e':'var(--accent)';
-  const bgOn=isOther?'#fef9c3':'var(--accent-light)';
+  const bgOn=isOther?'#dbeafe':'var(--accent-light)';
   el.innerHTML=fieldWorkers.map(w=>{
     const on=nippoWorkerIds.map(Number).includes(w.id);
     const stay=nippoStayMap[w.id]||'commute'; // 'commute'=通い, 'stay'=泊まり
@@ -1307,7 +1307,7 @@ function nippoCard(r,isOther=false){
   const inputWorkerName=ex.inputWorker?(fieldWorkers.find(w=>w.id===Number(ex.inputWorker))||{}).name||'':'';
   const stayTypes=ex.workerStayTypes||{};
   const allW=(ex.allWorkers||[]).map(wid=>{const w=fieldWorkers.find(x=>x.id===Number(wid));return w?{name:w.name,stay:stayTypes[wid]||stayTypes[String(wid)]||'commute'}:null}).filter(Boolean);
-  const chipColor=isOther?'background:#fef9c3;color:#854d0e':'background:#dbeafe;color:#1d4ed8';
+  const chipColor=isOther?'background:#dbeafe;color:#1d4ed8':'background:#dbeafe;color:#1d4ed8';
   const badges=[];
   if(ex.location)badges.push(`<span class="badge blue">${ex.location}</span>`);
   if(ex.material&&ex.material!=='自社')badges.push(`<span class="badge">${ex.material}</span>`);
@@ -1317,7 +1317,7 @@ function nippoCard(r,isOther=false){
   if(ex.client)badges.push(`<span class="badge amber">${ex.client}</span>`);
   const editBtn=isOther?`onclick="editOtherNippo(${r.id})"`:`onclick="editNippo(${r.id})"`;
   const delBtn=isOther?`onclick="deleteOtherNippo(${r.id})"`:`onclick="deleteNippo(${r.id})"`;
-  return`<div style="background:var(--surface);border:1px solid ${isOther?'#fcd34d':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px">
+  return`<div style="background:var(--surface);border:1px solid ${isOther?'#93c5fd':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div>
         <div style="font-size:13px;font-weight:800;color:${isOther?'#92400e':'var(--accent)'}">${siteName}</div>
@@ -1412,6 +1412,18 @@ function renderAssign(){
     </th>`;
   }).join('');
 
+  // 同日複数現場の重複チェック（現場行＋その他を含む）
+  const dupMap={};
+  strs.forEach(ds=>{
+    const counts={};
+    active.forEach(t=>{
+      assignments.filter(a=>a.task_id===t.id&&a.date===ds).forEach(a=>{counts[a.worker_id]=(counts[a.worker_id]||0)+1;});
+    });
+    // その他にも配置されている場合もカウント
+    getOtherAsg(ds).forEach(wid=>{counts[wid]=(counts[wid]||0)+1;});
+    dupMap[ds]=new Set(Object.entries(counts).filter(([,v])=>v>1).map(([k])=>Number(k)));
+  });
+
   // 現場行
   const siteRows=active.map(t=>{
     const cells=strs.map((ds,i)=>{
@@ -1420,7 +1432,12 @@ function renderAssign(){
       const asgList=assignments.filter(a=>a.task_id===t.id&&a.date===ds);
       const chips=asgList.map(a=>{
         const w=fieldWorkers.find(x=>x.id===a.worker_id);
-        return w?`<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`:'';
+        if(!w)return'';
+        const isDup=dupMap[ds]&&dupMap[ds].has(w.id);
+        const chipBg=isDup?'#fed7aa':'#dbeafe';
+        const chipColor=isDup?'#c2410c':'#1d4ed8';
+        const chipBorder=isDup?'border:1px solid #fb923c;':'';
+        return`<span style="display:inline-block;background:${chipBg};color:${chipColor};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap;${chipBorder}" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})" title="⚠️ 同日に複数現場に配置されています">${isDup?'⚠️':''} ${w.name}</span>`;
       }).join('');
       const wids=asgList.map(a=>a.worker_id);
       return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
@@ -1465,11 +1482,11 @@ function renderAssign(){
           const isSat=i===5,isSun=i===6;
           const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
           const otherWids=getOtherAsg(ds);
-          const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);return w?`<span style="display:inline-block;background:#fef9c3;color:#854d0e;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${w.name}</span>`:''}).join('');
+          const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);if(!w)return'';const isDup=dupMap[ds]&&dupMap[ds].has(Number(wid));const cBg=isDup?'#fed7aa':'#bfdbfe';const cCol=isDup?'#c2410c':'#1e40af';const cBorder=isDup?'border:1px solid #fb923c;':'';return`<span style="display:inline-block;background:${cBg};color:${cCol};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap;${cBorder}">${isDup?'⚠️ ':''}${w.name}</span>`;}).join('');
           return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openOtherCellAssign('${ds}',event)">
             ${otherChips}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
-              <span style="font-size:10px;color:${otherWids.length?'#854d0e':'var(--border)'}">${otherWids.length?otherWids.length+'名':''}</span>
+              <span style="font-size:10px;color:${otherWids.length?'#1e40af':'var(--border)'}">${otherWids.length?otherWids.length+'名':''}</span>
               ${otherWids.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromOther('${ds}',[${otherWids.join(',')}])">日報</button>`:''}
             </div>
           </td>`;
@@ -1513,7 +1530,7 @@ function renderOtherCellWorkers(){
   const otherWids=getOtherAsg(cellOtherDate);
   document.getElementById('cellAssignWorkers').innerHTML=fieldWorkers.map(w=>{
     const on=otherWids.includes(w.id);
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${on?'#fef9c3':'var(--bg)'};border:1px solid ${on?'#fcd34d':'var(--border)'}">
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${on?'#dbeafe':'var(--bg)'};border:1px solid ${on?'#93c5fd':'var(--border)'}">
       <span style="font-weight:${on?700:400}">${w.name}</span>
       <button class="btn btn-sm" style="background:${on?'#ef4444':'var(--accent)'};color:#fff;padding:3px 12px" onclick="toggleOtherCellWorker(${w.id})">
         ${on?'解除':'配置'}
