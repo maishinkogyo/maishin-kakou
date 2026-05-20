@@ -222,48 +222,49 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- 作業配置 -->
       <div class="page" id="page-assign">
         <div class="page-title">作業配置</div>
-        <div class="toolbar" style="justify-content:space-between;align-items:center">
-          <button class="btn btn-secondary btn-sm" onclick="weekOffset--;renderAssign()">← 前週</button>
-          <span id="assignWeekLabel" style="font-weight:700;font-size:14px"></span>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-secondary btn-sm" onclick="weekOffset=0;renderAssign()">今週</button>
-            <button class="btn btn-secondary btn-sm" onclick="weekOffset++;renderAssign()">次週 →</button>
-          </div>
-        </div>
-        <div id="assignBanner" style="margin-top:8px"></div>
-        <div id="assignBoard" style="overflow-x:auto"></div>
-      </div>
-
-      <!-- 日報集計 -->
-      <div class="page" id="page-nippo">
-        <div class="page-title">日報集計</div>
-        <!-- タブ -->
         <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0">
-          <button class="nippo-tab active" id="nippoTab-list" onclick="switchNippoTab('list')">📋 一覧</button>
-          <button class="nippo-tab" id="nippoTab-timeline" onclick="switchNippoTab('timeline')">📅 タイムスケジュール</button>
+          <button class="nippo-tab active" id="assignTab-grid" onclick="switchAssignTab('grid')">📋 配置表</button>
+          <button class="nippo-tab" id="assignTab-timeline" onclick="switchAssignTab('timeline')">📅 タイムスケジュール</button>
         </div>
-        <!-- 一覧パネル -->
-        <div id="nippoPane-list">
-          <div class="toolbar" style="flex-wrap:wrap;gap:8px">
-            <div class="form-group" style="min-width:180px;margin:0">
-              <select id="nippoSiteSel" onchange="renderNippo()">
-                <option value="">全現場</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin:0">
-              <input type="month" id="nippoMonth" onchange="renderNippo()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px">
+
+        <!-- 配置表パネル -->
+        <div id="assignPane-grid">
+          <div class="toolbar" style="justify-content:space-between;align-items:center">
+            <button class="btn btn-secondary btn-sm" onclick="weekOffset--;renderAssign()">← 前週</button>
+            <span id="assignWeekLabel" style="font-weight:700;font-size:14px"></span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="weekOffset=0;renderAssign()">今週</button>
+              <button class="btn btn-secondary btn-sm" onclick="weekOffset++;renderAssign()">次週 →</button>
             </div>
           </div>
-          <div id="nippoList" style="margin-top:12px"></div>
+          <div id="assignBanner" style="margin-top:8px"></div>
+          <div id="assignBoard" style="overflow-x:auto"></div>
         </div>
-        <!-- スケジュールパネル -->
-        <div id="nippoPane-timeline" style="display:none">
+
+        <!-- タイムスケジュールパネル -->
+        <div id="assignPane-timeline" style="display:none">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
             <input type="date" id="tlNippoDate" onchange="renderNippoTimeline()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
             <button class="btn btn-secondary btn-sm" onclick="document.getElementById('tlNippoDate').value=todayStr();renderNippoTimeline()">今日</button>
           </div>
           <div id="nippoTimelineView"></div>
         </div>
+      </div>
+
+      <!-- 日報集計 -->
+      <div class="page" id="page-nippo">
+        <div class="page-title">日報集計</div>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+          <div class="form-group" style="min-width:180px;margin:0">
+            <select id="nippoSiteSel" onchange="renderNippo()">
+              <option value="">全現場</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <input type="month" id="nippoMonth" onchange="renderNippo()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px">
+          </div>
+        </div>
+        <div id="nippoList" style="margin-top:12px"></div>
       </div>
 
       <!-- 原価管理 -->
@@ -1289,10 +1290,10 @@ function toggleNippoStay(wid){
 }
 
 // ── 日報タブ切り替え ──
-function switchNippoTab(tab){
-  ['list','timeline'].forEach(t=>{
-    document.getElementById('nippoPane-'+t).style.display=t===tab?'':'none';
-    document.getElementById('nippoTab-'+t).classList.toggle('active',t===tab);
+function switchAssignTab(tab){
+  ['grid','timeline'].forEach(t=>{
+    document.getElementById('assignPane-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('assignTab-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='timeline'){
     if(!document.getElementById('tlNippoDate').value) document.getElementById('tlNippoDate').value=todayStr();
