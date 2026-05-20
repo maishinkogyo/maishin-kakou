@@ -263,19 +263,25 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         <div class="page-title">設定</div>
         <div class="page-desc"></div>
 
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">作業員マスタ</div>
-          <div class="toolbar" style="margin-bottom:12px">
-            <div class="spacer"></div>
+        <!-- マスタ管理ボタン群 -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+          <button class="btn btn-secondary" style="font-size:14px;padding:12px 24px;border-radius:10px;font-weight:600" onclick="toggleSettingsPanel('workers')">👷 従業員マスタ</button>
+          <button class="btn btn-secondary" style="font-size:14px;padding:12px 24px;border-radius:10px;font-weight:600" onclick="toggleSettingsPanel('vehicles')">🚗 車両マスタ</button>
+        </div>
+
+        <!-- 従業員マスタパネル -->
+        <div class="card" id="settingsPanel-workers" style="margin-bottom:20px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title" style="margin-bottom:0">👷 従業員マスタ</div>
             <button class="btn btn-primary btn-sm" onclick="openWorkerModal()">＋ 追加</button>
           </div>
           <div id="workerList"></div>
         </div>
 
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">🚗 車両マスタ</div>
-          <div class="toolbar" style="margin-bottom:12px">
-            <div class="spacer"></div>
+        <!-- 車両マスタパネル -->
+        <div class="card" id="settingsPanel-vehicles" style="margin-bottom:20px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title" style="margin-bottom:0">🚗 車両マスタ</div>
             <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 追加</button>
           </div>
           <div id="vehicleList"></div>
@@ -1842,6 +1848,19 @@ function deleteVehicle(id){
 
 
 // ── UI ──
+function toggleSettingsPanel(name){
+  const panel=document.getElementById('settingsPanel-'+name);
+  if(!panel)return;
+  const isOpen=panel.style.display!=='none';
+  // 一度全部閉じる
+  document.querySelectorAll('[id^="settingsPanel-"]').forEach(p=>{p.style.display='none';});
+  // 閉じてたら開く（開いてたらそのまま閉じた状態）
+  if(!isOpen){
+    panel.style.display='block';
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
