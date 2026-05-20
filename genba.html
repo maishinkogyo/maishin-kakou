@@ -765,10 +765,6 @@ function renderSites(){
         ${meta.unitType&&meta.unitType!=='none'?`<span class="badge purple">${meta.unitType==='full'?'マイシングレード':meta.unitType==='outer'?'外周のみ':meta.unitOtherNote||'その他'}</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
       </div>
-      <!-- 作業員チップ -->
-      ${ws.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        ${ws.map(w=>`<span style="background:#f3e8ff;color:#7c3aed;border:1px solid #d8b4fe;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">👤 ${w.name}</span>`).join('')}
-      </div>`:''}
       <!-- kg表示 -->
       ${totalKg>0?`<div style="margin-bottom:8px">
         <span style="font-size:15px;font-weight:700;color:#10b981">${completedKg.toLocaleString()}</span>
