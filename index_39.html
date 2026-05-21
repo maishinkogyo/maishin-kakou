@@ -4649,10 +4649,6 @@ function showChangePassword(){
 // ── Init ──
 const gs=new Date(TODAY);gs.setDate(gs.getDate()-3);
 document.getElementById('ganttStart').value=gs.toISOString().slice(0,10);
-// Show lock screen on startup
-document.getElementById('lockSub').textContent =
-  localStorage.getItem(PW_KEY) ? 'パスワードを入力してください' : `初期パスワード: ${PW_DEFAULT}（設定後に変更してください）`;
-setTimeout(()=>document.getElementById('lockInput').focus(), 100);
 // Load from Supabase after unlock
 async function initApp(){
   // iOSのSafari対策: 少し待ってから接続
