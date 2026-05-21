@@ -1,4 +1,125 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=index_39.html">
-</head><body></body></html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>マイシン工業 管理システム</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f172a 0%,#14532d 50%,#0f172a 100%);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.container{
+  width:100%;
+  max-width:560px;
+  text-align:center;
+}
+.logo{
+  margin-bottom:40px;
+}
+.logo-main{
+  font-size:28px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:.02em;
+}
+.logo-sub{
+  font-size:13px;
+  color:rgba(255,255,255,.5);
+  margin-top:4px;
+}
+.cards{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.app-card{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  padding:28px 24px;
+  text-decoration:none;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  transition:all .2s;
+  cursor:pointer;
+  text-align:left;
+}
+.app-card:hover{
+  background:rgba(255,255,255,.13);
+  border-color:rgba(255,255,255,.3);
+  transform:translateY(-2px);
+  box-shadow:0 12px 40px rgba(0,0,0,.3);
+}
+.app-icon{
+  font-size:40px;
+  flex-shrink:0;
+  width:64px;
+  height:64px;
+  background:rgba(255,255,255,.1);
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.app-info{
+  flex:1;
+}
+.app-name{
+  font-size:18px;
+  font-weight:800;
+  color:#fff;
+  margin-bottom:4px;
+}
+.app-desc{
+  font-size:13px;
+  color:rgba(255,255,255,.55);
+  line-height:1.5;
+}
+.app-arrow{
+  font-size:20px;
+  color:rgba(255,255,255,.3);
+  flex-shrink:0;
+}
+.footer{
+  margin-top:32px;
+  font-size:12px;
+  color:rgba(255,255,255,.25);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <div class="logo-main">🏭 マイシン工業</div>
+    <div class="logo-sub">管理システム</div>
+  </div>
+  <div class="cards">
+    <a class="app-card" href="genba.html">
+      <div class="app-icon">🏗️</div>
+      <div class="app-info">
+        <div class="app-name">現場管理</div>
+        <div class="app-desc">現場一覧・作業配置・日報集計・原価管理</div>
+      </div>
+      <div class="app-arrow">›</div>
+    </a>
+    <a class="app-card" href="index_39.html">
+      <div class="app-icon">⚙️</div>
+      <div class="app-info">
+        <div class="app-name">加工管理</div>
+        <div class="app-desc">加工指示・進捗管理・タスク管理</div>
+      </div>
+      <div class="app-arrow">›</div>
+    </a>
+  </div>
+  <div class="footer">マイシン工業 © 2025</div>
+</div>
+</body>
+</html>
