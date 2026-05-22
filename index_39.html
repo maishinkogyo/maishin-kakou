@@ -2051,7 +2051,7 @@ function printActive(){exportPdf('active');}
 function printGantt(){exportPdf('gantt');}
 
 function ganttToday(){
-  const d=new Date(TODAY);d.setDate(d.getDate()-3);
+  const d=new Date(TODAY);
   document.getElementById('ganttStart').value=d.toISOString().slice(0,10);
   renderGantt();
 }
@@ -2060,7 +2060,7 @@ function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
   const days=Number(document.getElementById('ganttDays').value);
   const wf=document.getElementById('ganttWorker').value;
-  const startD=sv?toD(sv):(()=>{const d=new Date(TODAY);d.setDate(d.getDate()-3);return d;})();
+  const startD=sv?toD(sv):new Date(TODAY);
 
   const dates=[];
   for(let d=new Date(startD);dates.length<days;d.setDate(d.getDate()+1))dates.push(new Date(d));
@@ -4657,6 +4657,8 @@ async function initApp(){
   // iOSのSafari対策: 少し待ってから接続
   await new Promise(r => setTimeout(r, 300));
   await loadData();
+  // ガントチャート初期値を今日に設定
+  document.getElementById('ganttStart').value=new Date(TODAY).toISOString().slice(0,10);
   render();
 }
 initApp();
