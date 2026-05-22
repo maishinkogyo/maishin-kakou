@@ -1723,12 +1723,13 @@ function renderGantt(){
   if(filter==='active')list=tasks.filter(t=>!t.complete);
   if(filter==='complete')list=tasks.filter(t=>t.complete);
 
-  const DAYS=30;
   const todayStr2=todayStr();
   const todayD=new Date(todayStr2);
   // 起点：月の1日 + offset
   const startD=new Date(todayD);
   startD.setDate(1+ganttDayOffset);
+  // その月の日数を取得
+  const DAYS=new Date(startD.getFullYear(),startD.getMonth()+1,0).getDate();
   const endD=new Date(startD);
   endD.setDate(endD.getDate()+DAYS-1);
 
