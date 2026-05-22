@@ -1726,9 +1726,9 @@ function renderGantt(){
   const DAYS=30;
   const todayStr2=todayStr();
   const todayD=new Date(todayStr2);
-  // 起点：今日 + offset
+  // 起点：月の1日 + offset
   const startD=new Date(todayD);
-  startD.setDate(startD.getDate()+ganttDayOffset);
+  startD.setDate(1+ganttDayOffset);
   const endD=new Date(startD);
   endD.setDate(endD.getDate()+DAYS-1);
 
