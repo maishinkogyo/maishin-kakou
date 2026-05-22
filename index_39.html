@@ -2051,7 +2051,9 @@ function printGantt(){exportPdf('gantt');}
 
 function ganttToday(){
   const d=new Date(TODAY);
+  d.setDate(d.getDate()-15); // 今日から15日前を表示開始日に設定
   document.getElementById('ganttStart').value=d.toISOString().slice(0,10);
+  document.getElementById('ganttDays').value='30'; // 30日間表示
   renderGantt();
 }
 
