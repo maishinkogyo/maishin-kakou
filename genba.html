@@ -201,7 +201,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
               <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset-=30;renderGantt()">← 前へ</button>
               <span id="ganttMonthLabel" style="font-weight:700;font-size:14px;min-width:120px;text-align:center"></span>
               <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset+=30;renderGantt()">次へ →</button>
-              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset=0;renderGantt()">今日</button>
+              <button class="btn btn-secondary btn-sm" onclick="ganttToday()">今日</button>
             </div>
           </div>
           <div id="ganttBoard" style="overflow-x:auto"></div>
@@ -1708,6 +1708,12 @@ async function deleteCost(id){
 
 // ── ガントチャート ──
 let ganttDayOffset=0;
+let ganttCenterDate=null; // null=月始まり、date=その日を中心
+
+function ganttToday(){
+  ganttCenterDate=new Date(todayStr());
+  renderGantt();
+}
 
 function switchSiteTab(name){
   ['list','gantt'].forEach(n=>{
@@ -1725,11 +1731,21 @@ function renderGantt(){
 
   const todayStr2=todayStr();
   const todayD=new Date(todayStr2);
-  // 起点：月の1日 + offset
-  const startD=new Date(todayD);
-  startD.setDate(1+ganttDayOffset);
-  // その月の日数を取得
-  const DAYS=new Date(startD.getFullYear(),startD.getMonth()+1,0).getDate();
+  // 起点：今日を中心か月の1日から
+  let startD;
+  let DAYS;
+  if(ganttCenterDate){
+    // 今日を中心に前後15日ずつ（計30日）
+    startD=new Date(ganttCenterDate);
+    startD.setDate(ganttCenterDate.getDate()-15);
+    DAYS=30;
+  }else{
+    // 月の1日 + offset
+    startD=new Date(todayD);
+    startD.setDate(1+ganttDayOffset);
+    // その月の日数を取得
+    DAYS=new Date(startD.getFullYear(),startD.getMonth()+1,0).getDate();
+  }
   const endD=new Date(startD);
   endD.setDate(endD.getDate()+DAYS-1);
 
