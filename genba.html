@@ -198,9 +198,9 @@ input,select,textarea{font-family:inherit;font-size:14px;}
               <option value="complete">完了済</option>
             </select>
             <div style="display:flex;align-items:center;gap:6px">
-              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset-=30;renderGantt()">← 前へ</button>
+              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset-=30;ganttCenterDate=null;renderGantt()">← 前へ</button>
               <span id="ganttMonthLabel" style="font-weight:700;font-size:14px;min-width:120px;text-align:center"></span>
-              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset+=30;renderGantt()">次へ →</button>
+              <button class="btn btn-secondary btn-sm" onclick="ganttDayOffset+=30;ganttCenterDate=null;renderGantt()">次へ →</button>
               <button class="btn btn-secondary btn-sm" onclick="ganttToday()">今日</button>
             </div>
           </div>
@@ -320,11 +320,31 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 <!-- 現場詳細モーダル -->
 <!-- 作業配置セルモーダル -->
 <div class="modal-overlay" id="cellAssignModal">
-  <div class="modal" style="max-width:320px">
+  <div class="modal" style="max-width:400px">
     <div class="modal-title" id="cellAssignTitle"></div>
-    <div id="cellAssignWorkers" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+    <div style="display:flex;gap:16px;margin-bottom:16px">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">作業員</div>
+        <div id="cellAssignWorkers" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">車両</div>
+        <div id="cellAssignVehicles" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('cellAssignModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 使用車両配置モーダル -->
+<div class="modal-overlay" id="vehicleAssignModal">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-title" id="vehicleAssignTitle"></div>
+    <div id="vehicleAssignList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('vehicleAssignModal')">閉じる</button>
     </div>
   </div>
 </div>
@@ -537,8 +557,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <option value="乗用車">乗用車</option>
           <option value="軽トラック">軽トラック</option>
           <option value="2tトラック">2tトラック</option>
+          <option value="3tトラック">3tトラック</option>
           <option value="4tトラック">4tトラック</option>
           <option value="バン">バン</option>
+          <option value="大型">大型</option>
           <option value="その他">その他</option>
         </select>
       </div>
@@ -546,6 +568,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     <div class="form-row">
       <div class="form-group"><label>ナンバー</label><input type="text" id="vehPlate" placeholder="鳥取 500 あ 1234"></div>
       <div class="form-group"><label>メモ</label><input type="text" id="vehNote" placeholder="任意"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>車検日</label><input type="date" id="vehInspection"></div>
+      <div class="form-group"><label>車検先</label><input type="text" id="vehInspectionPlace" placeholder="例：〇〇自動車検査登録事務所"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('vehicleModal')">キャンセル</button>
@@ -563,6 +589,22 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let tasks=[],fieldWorkers=[],assignments=[],workRecords=[],costs=[];
 let editingCostId=null,editingWrkId=null;
+
+// ── Storage ──
+const STORAGE_KEY='taskManager_v1'; // 加工アプリと同じキー
+function loadTasksFromStorage(){
+  try{
+    const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    return(data.tasks||[]).map(x=>({...x,nameMain:x.name_main||x.nameMain||'',nameSub:x.name_sub||x.nameSub||''}));
+  }catch{return[];}
+}
+function saveTasksToStorage(){
+  try{
+    const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    data.tasks=tasks;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  }catch{}
+}
 
 // ── Auth ──
 const PW_KEY='genba_pw';
@@ -586,19 +628,21 @@ async function initApp(){
   showLoading();
   weekOffset=0;
   try{
-    const[t,fw,asg,wr,c]=await Promise.all([
-      sb.from('genba_tasks').select('*').order('num'),
-      sb.from('field_workers').select('*').order('name'),
-      sb.from('field_assignments').select('*'),
-      sb.from('field_work_records').select('*').order('date',{ascending:false}),
-      sb.from('field_costs').select('*').order('date',{ascending:false}),
-    ]);
-    const kgMap=loadKgMap();
-    tasks=(t.data||[]).map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||'',total_kg:kgMap[x.id]||0}));
-    fieldWorkers=fw.data||[];
-    assignments=asg.data||[];
-    workRecords=wr.data||[];
-    costs=c.data||[];
+    // localStorage から tasks を読み込む（加工アプリと連携）
+    tasks=loadTasksFromStorage();
+    // 他のデータは Supabase から（オプション）
+    try{
+      const[fw,asg,wr,c]=await Promise.all([
+        sb.from('field_workers').select('*').order('name'),
+        sb.from('field_assignments').select('*'),
+        sb.from('field_work_records').select('*').order('date',{ascending:false}),
+        sb.from('field_costs').select('*').order('date',{ascending:false}),
+      ]);
+      fieldWorkers=fw.data||[];
+      assignments=asg.data||[];
+      workRecords=wr.data||[];
+      costs=c.data||[];
+    }catch(e){console.warn('Supabase接続エラー、ローカルデータのみ使用します:',e);}
   }catch(e){console.error(e);}
   hideLoading();
   populateSelects();
@@ -854,21 +898,22 @@ async function saveSite(){
     saleAmount:document.getElementById('siteSaleAmount').value,
   };
   if(editingSiteId){
-    const{error}=await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);
-    if(error){alert('更新失敗: '+error.message);return;}
     const t=tasks.find(x=>x.id===editingSiteId);
     Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
     setTaskKg(editingSiteId,total_kg);
     setTaskMeta(editingSiteId,meta);
+    // Supabase 更新（オプション）
+    try{await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);}catch(e){console.warn(e);}
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
-    const{data,error}=await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num}).select().single();
-    if(error){alert('追加失敗: '+error.message);return;}
-    const newTask={...data,nameMain:data.name_main,nameSub:data.name_sub||'',total_kg};
+    const newTask={name_main,name_sub,start_date,deadline,complete:false,num,nameMain:name_main,nameSub:name_sub||'',total_kg,id:Math.max(...tasks.map(x=>x.id||0),0)+1};
     tasks.push(newTask);
-    setTaskKg(data.id,total_kg);
-    setTaskMeta(data.id,meta);
+    setTaskKg(newTask.id,total_kg);
+    setTaskMeta(newTask.id,meta);
+    // Supabase 追加（オプション）
+    try{await sb.from('genba_tasks').insert({name_main,name_sub,start_date,deadline,complete:false,num});}catch(e){console.warn(e);}
   }
+  saveTasksToStorage();
   flash();closeModal('siteModal');populateSelects();renderSites();
 }
 async function toggleSiteCompleteFromEdit(){
@@ -888,15 +933,18 @@ async function deleteSiteFromEdit(){
 async function toggleSiteComplete(id){
   const t=tasks.find(x=>x.id===id);
   const complete=!t.complete;
-  const{error}=await sb.from('genba_tasks').update({complete}).eq('id',id);
-  if(error){alert('更新失敗: '+error.message);return;}
   t.complete=complete;
+  // Supabase 更新（オプション）
+  try{await sb.from('genba_tasks').update({complete}).eq('id',id);}catch(e){console.warn(e);}
+  saveTasksToStorage();
   flash();populateSelects();renderSites();renderAssign();
 }
 async function deleteSite(id){
   if(!confirm('この現場を削除しますか？\n関連する作業記録・原価も削除されます。'))return;
-  await sb.from('genba_tasks').delete().eq('id',id);
   tasks=tasks.filter(x=>x.id!==id);
+  // Supabase 削除（オプション）
+  try{await sb.from('genba_tasks').delete().eq('id',id);}catch(e){console.warn(e);}
+  saveTasksToStorage();
   flash();populateSelects();renderSites();renderAssign();
 }
 
@@ -1196,7 +1244,7 @@ async function saveNippo(){
     if(error){alert('エラー: '+error.message);return;}
     workRecords.unshift(data);
   }
-  closeModal('nippoModal');flash();renderNippo();renderSites();
+  closeModal('nippoModal');flash();renderNippo();renderSites();renderAssign();
 }
 
 async function deleteNippo(id){
@@ -1479,17 +1527,27 @@ function renderAssign(){
         const chipBg=isDup?'#fed7aa':'#dbeafe';
         const chipColor=isDup?'#c2410c':'#1d4ed8';
         const chipBorder=isDup?'border:1px solid #fb923c;':'';
-        return`<span style="display:inline-block;background:${chipBg};color:${chipColor};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap;${chipBorder}" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})" title="⚠️ 同日に複数現場に配置されています">${isDup?'⚠️':''} ${w.name}</span>`;
+        return`<span style="display:inline-block;background:${chipBg};color:${chipColor};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;cursor:pointer;white-space:nowrap;${chipBorder}" onclick="event.stopPropagation();toggleAssign(${t.id},${w.id},'${ds}',${a.id})">${w.name}</span>`;
       }).join('');
+
+      // 使用車両チップ
+      const siteVehicleAsg=getSiteVehicleAsg(t.id,ds);
+      const allVehicles=loadVehicles();
+      const vehicleChips=siteVehicleAsg.map(vid=>{const v=allVehicles.find(x=>x.id===vid);if(!v)return'';return`<span style="display:inline-block;background:#f3e8ff;color:#9333ea;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${v.name}</span>`;}).join('');
+
       const wids=asgList.map(a=>a.worker_id);
+      const hasNippo=workRecords.some(r=>r.task_id===t.id&&r.date===ds);
+      const btnColor=hasNippo?'#9ca3af':'var(--accent)';
       return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openCellAssign(${t.id},'${ds}',event)">
         ${chips}
+        ${vehicleChips?`<div style="margin-top:4px;font-size:10px;color:#6b7280">車両:</div>${vehicleChips}`:''}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
           <span style="font-size:10px;color:${asgList.length?'#2563eb':'var(--border)'}">${asgList.length?asgList.length+'名':''}</span>
-          ${asgList.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromAssign(${t.id},'${ds}',[${wids.join(',')}])">日報</button>`:''}
+          ${asgList.length?`<button style="font-size:10px;padding:1px 5px;background:${btnColor};color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromAssign(${t.id},'${ds}',[${wids.join(',')}])">日報</button>`:''}
         </div>
       </td>`;
     }).join('');
+
     return`<tr>
       <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:var(--surface2);white-space:nowrap;min-width:70px;vertical-align:middle">
         ${t.nameMain}${t.nameSub?`<div style="font-weight:400;color:var(--text-muted);font-size:10px">${t.nameSub}</div>`:''}
@@ -1524,9 +1582,16 @@ function renderAssign(){
           const isSat=i===5,isSun=i===6;
           const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
           const otherWids=getOtherAsg(ds);
-          const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);if(!w)return'';const isDup=dupMap[ds]&&dupMap[ds].has(Number(wid));const cBg=isDup?'#fed7aa':'#bfdbfe';const cCol=isDup?'#c2410c':'#1e40af';const cBorder=isDup?'border:1px solid #fb923c;':'';return`<span style="display:inline-block;background:${cBg};color:${cCol};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap;${cBorder}">${isDup?'⚠️ ':''}${w.name}</span>`;}).join('');
+          const otherChips=otherWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);if(!w)return'';const isDup=dupMap[ds]&&dupMap[ds].has(Number(wid));const cBg=isDup?'#fed7aa':'#bfdbfe';const cCol=isDup?'#c2410c':'#1e40af';const cBorder=isDup?'border:1px solid #fb923c;':'';return`<span style="display:inline-block;background:${cBg};color:${cCol};border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap;${cBorder}">${w.name}</span>`;}).join('');
+
+          // 「その他」の使用車両
+          const otherVehicleAsg=getOtherVehicleAsg(ds);
+          const allVehicles=loadVehicles();
+          const vehicleChips=otherVehicleAsg.map(vid=>{const v=allVehicles.find(x=>x.id===vid);if(!v)return'';return`<span style="display:inline-block;background:#f3e8ff;color:#9333ea;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${v.name}</span>`;}).join('');
+
           return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openOtherCellAssign('${ds}',event)">
             ${otherChips}
+            ${vehicleChips?`<div style="margin-top:4px;font-size:10px;color:#6b7280">車両:</div>${vehicleChips}`:''}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
               <span style="font-size:10px;color:${otherWids.length?'#1e40af':'var(--border)'}">${otherWids.length?otherWids.length+'名':''}</span>
               ${otherWids.length?`<button style="font-size:10px;padding:1px 5px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openNippoFromOther('${ds}',[${otherWids.join(',')}])">日報</button>`:''}
@@ -1535,8 +1600,40 @@ function renderAssign(){
         }).join('')}
       </tr>
       <tr>
+        <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);white-space:nowrap;vertical-align:middle">休み</td>
+        ${strs.map((ds,i)=>{
+          const isSat=i===5,isSun=i===6;
+          const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
+          const offWids=getOffAsg(ds);
+          const offChips=offWids.map(wid=>{const w=fieldWorkers.find(x=>x.id===wid);if(!w)return'';return`<span style="display:inline-block;background:#d1fae5;color:#059669;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap">${w.name}</span>`;}).join('');
+          return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border);cursor:pointer" onclick="openOffCellAssign('${ds}',event)">
+            ${offChips}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+              <span style="font-size:10px;color:${offWids.length?'#059669':'var(--border)'}">${offWids.length?offWids.length+'名':''}</span>
+            </div>
+          </td>`;
+        }).join('')}
+      </tr>
+      <tr>
         <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:#fff5f5;color:#dc2626;white-space:nowrap;vertical-align:middle">未配置</td>
         ${unassignedCells}
+      </tr>
+      <tr>
+        <td style="font-size:12px;font-weight:700;padding:6px 8px;border:1px solid var(--border);background:#f9f5ff;color:#9333ea;white-space:nowrap;vertical-align:middle">未使用</td>
+        ${strs.map((ds,i)=>{
+          const isSat=i===5,isSun=i===6;
+          const cellBg=isSun?'#fff9f9':isSat?'#f0f7ff':'';
+          const allVehicles=loadVehicles();
+          const siteVehicleAsgMap=loadSiteVehicleAsg();
+          const assignedVids=new Set();
+          active.forEach(t=>{const key=t.id+'-'+ds;const vids=siteVehicleAsgMap[key]||[];vids.forEach(vid=>assignedVids.add(vid));});
+          const unusedVehicles=allVehicles.filter(v=>!assignedVids.has(v.id));
+          const unusedChips=unusedVehicles.map(v=>{return`<span style="display:inline-block;background:#f3e8ff;color:#9333ea;border-radius:4px;font-size:11px;padding:1px 5px;margin:1px;white-space:nowrap;cursor:pointer" onclick="openUnusedVehicleAssignModal('${v.id}','${ds}',event)">${v.name}</span>`;}).join('');
+          return`<td style="vertical-align:top;padding:5px 4px;${cellBg?'background:'+cellBg+';':''}border:1px solid var(--border)">
+            ${unusedChips}
+            <div style="text-align:right;font-size:10px;color:${unusedVehicles.length?'#9333ea':'var(--border)'};margin-top:2px">${unusedVehicles.length?unusedVehicles.length+'台':''}</div>
+          </td>`;
+        }).join('')}
       </tr>
     </tbody>
   </table>`;
@@ -1555,6 +1652,66 @@ function toggleOtherAsg(date,wid){
   saveOtherAsg(m);
 }
 
+// ── 休み配置（localStorage管理） ──
+function loadOffAsg(){try{return JSON.parse(localStorage.getItem('genba_off_asg')||'{}')}catch{return{}}}
+function saveOffAsg(m){localStorage.setItem('genba_off_asg',JSON.stringify(m));}
+function getOffAsg(date){return loadOffAsg()[date]||[];}
+function toggleOffAsg(date,wid){
+  const m=loadOffAsg();
+  const list=m[date]||[];
+  const idx=list.indexOf(wid);
+  if(idx>=0)list.splice(idx,1); else list.push(wid);
+  if(list.length)m[date]=list; else delete m[date];
+  saveOffAsg(m);
+}
+
+// ── 使用車両配置（日付単位：全体）──
+function loadVehicleAsg(){try{return JSON.parse(localStorage.getItem('genba_vehicle_asg')||'{}')}catch{return{}}}
+function saveVehicleAsg(m){localStorage.setItem('genba_vehicle_asg',JSON.stringify(m));}
+function getVehicleAsg(date){return loadVehicleAsg()[date]||[];}
+function toggleVehicleAsg(date,vid){
+  const m=loadVehicleAsg();
+  const list=m[date]||[];
+  const idx=list.indexOf(vid);
+  if(idx>=0)list.splice(idx,1); else list.push(vid);
+  if(list.length)m[date]=list; else delete m[date];
+  saveVehicleAsg(m);
+}
+
+// ── 現場ごとの使用車両配置（現場×日付単位） ──
+function loadSiteVehicleAsg(){try{return JSON.parse(localStorage.getItem('genba_site_vehicle_asg')||'{}')}catch{return{}}}
+function saveSiteVehicleAsg(m){localStorage.setItem('genba_site_vehicle_asg',JSON.stringify(m));}
+function getSiteVehicleAsg(tid,date){
+  const m=loadSiteVehicleAsg();
+  const key=tid+'-'+date;
+  return m[key]||[];
+}
+function toggleSiteVehicleAsg(tid,date,vid){
+  const m=loadSiteVehicleAsg();
+  const key=tid+'-'+date;
+  const list=m[key]||[];
+  const idx=list.indexOf(vid);
+  if(idx>=0)list.splice(idx,1); else list.push(vid);
+  if(list.length)m[key]=list; else delete m[key];
+  saveSiteVehicleAsg(m);
+}
+
+// 「その他」用の車両配置管理
+function loadOtherVehicleAsg(){try{return JSON.parse(localStorage.getItem('genba_other_vehicle_asg')||'{}')}catch{return{}}}
+function saveOtherVehicleAsg(m){localStorage.setItem('genba_other_vehicle_asg',JSON.stringify(m));}
+function getOtherVehicleAsg(date){
+  const m=loadOtherVehicleAsg();
+  return m[date]||[];
+}
+function toggleOtherVehicleAsg(date,vid){
+  const m=loadOtherVehicleAsg();
+  const list=m[date]||[];
+  const idx=list.indexOf(vid);
+  if(idx>=0)list.splice(idx,1); else list.push(vid);
+  if(list.length)m[date]=list; else delete m[date];
+  saveOtherVehicleAsg(m);
+}
+
 let cellOtherDate=null;
 function openOtherCellAssign(date,ev){
   if(ev)ev.stopPropagation();
@@ -1564,6 +1721,7 @@ function openOtherCellAssign(date,ev){
   const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
   document.getElementById('cellAssignTitle').textContent=`その他　${d.getMonth()+1}/${d.getDate()}(${dow})`;
   renderOtherCellWorkers();
+  renderOtherCellAssignVehicles();
   // モーダルのトグル関数を切り替え
   document.getElementById('cellAssignWorkers').dataset.mode='other';
   openModal('cellAssignModal');
@@ -1585,6 +1743,136 @@ function toggleOtherCellWorker(wid){
   renderOtherCellWorkers();
   renderAssign();
 }
+function renderOtherCellAssignVehicles(){
+  const otherVehicleAsg=getOtherVehicleAsg(cellOtherDate);
+  const allVehicles=loadVehicles();
+  document.getElementById('cellAssignVehicles').innerHTML=allVehicles.map(v=>{
+    const on=otherVehicleAsg.includes(v.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:${on?'#f3e8ff':'var(--bg)'};border:1px solid ${on?'#d8b4fe':'var(--border)'};font-size:12px">
+      <span style="font-weight:${on?700:400}">${v.name}</span>
+      <button class="btn btn-sm" style="background:${on?'#ef4444':'#9333ea'};color:#fff;padding:2px 8px;font-size:11px" onclick="toggleOtherCellVehicle('${v.id}')">
+        ${on?'解除':'配置'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function toggleOtherCellVehicle(vid){
+  toggleOtherVehicleAsg(cellOtherDate,vid);
+  renderOtherCellAssignVehicles();
+  renderAssign();
+}
+
+// 未使用車両の現場配置
+let unusedVehicleSelectId=null, unusedVehicleSelectDate=null;
+function openUnusedVehicleAssignModal(vid, date, ev){
+  if(ev)ev.stopPropagation();
+  unusedVehicleSelectId=vid;
+  unusedVehicleSelectDate=date;
+  const v=loadVehicles().find(x=>x.id===vid);
+  const p=date.split('-');
+  const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
+  document.getElementById('cellAssignTitle').textContent=`${v.name}を配置（${d.getMonth()+1}/${d.getDate()}(${dow})）`;
+  renderUnusedVehicleSiteList();
+  openModal('cellAssignModal');
+  // モーダルレイアウトを現場一覧のみに変更
+  setTimeout(()=>{
+    const layoutDiv=document.querySelector('div[style*="display:flex;gap:16px"]');
+    if(layoutDiv){
+      layoutDiv.style.gridTemplateColumns='1fr';
+      layoutDiv.style.display='grid';
+    }
+    const workersParent=document.getElementById('cellAssignWorkers');
+    if(workersParent && workersParent.parentElement){
+      workersParent.parentElement.style.display='none';
+    }
+    const vehiclesParent=document.getElementById('cellAssignVehicles');
+    if(vehiclesParent && vehiclesParent.parentElement){
+      vehiclesParent.parentElement.style.display='block';
+      const titleDiv=vehiclesParent.parentElement.querySelector('div:first-child');
+      if(titleDiv)titleDiv.textContent='現場';
+    }
+  },50);
+}
+function renderUnusedVehicleSiteList(){
+  const active=tasks.filter(t=>!t.complete);
+  const siteList=active.map(t=>{
+    const isAssigned=getSiteVehicleAsg(t.id,unusedVehicleSelectDate).includes(unusedVehicleSelectId);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${isAssigned?'#f3e8ff':'var(--bg)'};border:1px solid ${isAssigned?'#d8b4fe':'var(--border)'};font-size:12px">
+      <span style="font-weight:${isAssigned?700:400}">${t.nameMain}${t.nameSub?` (${t.nameSub})`:''}</span>
+      <button class="btn btn-sm" style="background:${isAssigned?'#ef4444':'#059669'};color:#fff;padding:3px 12px" onclick="assignUnusedVehicleToSite(${t.id})">
+        ${isAssigned?'解除':'配置'}
+      </button>
+    </div>`;
+  }).join('');
+  document.getElementById('cellAssignVehicles').innerHTML=siteList;
+}
+function assignUnusedVehicleToSite(tid){
+  toggleSiteVehicleAsg(tid,unusedVehicleSelectDate,unusedVehicleSelectId);
+  renderUnusedVehicleSiteList();
+  renderAssign();
+}
+
+let cellOffDate=null;
+function openOffCellAssign(date,ev){
+  if(ev)ev.stopPropagation();
+  cellOffDate=date;
+  const p=date.split('-');
+  const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
+  document.getElementById('cellAssignTitle').textContent=`休み　${d.getMonth()+1}/${d.getDate()}(${dow})`;
+  renderOffCellWorkers();
+  // モーダルのトグル関数を切り替え
+  document.getElementById('cellAssignWorkers').dataset.mode='off';
+  openModal('cellAssignModal');
+}
+
+let cellVehicleDate=null;
+function openVehicleAssignModal(date,ev){
+  if(ev)ev.stopPropagation();
+  cellVehicleDate=date;
+  const p=date.split('-');
+  const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
+  document.getElementById('vehicleAssignTitle').textContent=`使用車両　${d.getMonth()+1}/${d.getDate()}(${dow})`;
+  renderVehicleList();
+  openModal('vehicleAssignModal');
+}
+function renderVehicleList(){
+  const vehicleAsg=getVehicleAsg(cellVehicleDate);
+  const allVehicles=loadVehicles();
+  document.getElementById('vehicleAssignList').innerHTML=allVehicles.map(v=>{
+    const on=vehicleAsg.includes(v.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${on?'#f3e8ff':'var(--bg)'};border:1px solid ${on?'#d8b4fe':'var(--border)'}">
+      <span style="font-weight:${on?700:400}">${v.name}</span>
+      <button class="btn btn-sm" style="background:${on?'#ef4444':'#9333ea'};color:#fff;padding:3px 12px" onclick="toggleVehicleAsgItem('${v.id}')">
+        ${on?'解除':'配置'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function toggleVehicleAsgItem(vid){
+  toggleVehicleAsg(cellVehicleDate,vid);
+  renderVehicleList();
+  renderAssign();
+}
+function renderOffCellWorkers(){
+  const offWids=getOffAsg(cellOffDate);
+  document.getElementById('cellAssignWorkers').innerHTML=fieldWorkers.map(w=>{
+    const on=offWids.includes(w.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${on?'#f3e8ff':'var(--bg)'};border:1px solid ${on?'#d8b4fe':'var(--border)'}">
+      <span style="font-weight:${on?700:400}">${w.name}</span>
+      <button class="btn btn-sm" style="background:${on?'#ef4444':'#7c3aed'};color:#fff;padding:3px 12px" onclick="toggleOffCellWorker(${w.id})">
+        ${on?'解除':'休み'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function toggleOffCellWorker(wid){
+  toggleOffAsg(cellOffDate,wid);
+  renderOffCellWorkers();
+  renderAssign();
+}
 
 let cellAssignTid=null,cellAssignDate=null;
 function openCellAssign(tid,date,ev){
@@ -1596,16 +1884,41 @@ function openCellAssign(tid,date,ev){
   const dow=DAY_NAMES[d.getDay()===0?6:d.getDay()-1];
   document.getElementById('cellAssignTitle').textContent=`${t.nameMain}　${d.getMonth()+1}/${d.getDate()}(${dow})`;
   renderCellAssignWorkers();
+  renderCellAssignVehicles();
+  // モーダルレイアウトをリセット（二列表示に戻す）
+  const layoutDiv=document.querySelector('div[style*="display:flex;gap:16px"]');
+  if(layoutDiv){
+    layoutDiv.style.display='flex';
+    layoutDiv.style.gridTemplateColumns='';
+  }
+  const workersDiv=document.getElementById('cellAssignWorkers').parentElement;
+  const vehiclesDiv=document.getElementById('cellAssignVehicles').parentElement;
+  workersDiv.style.display='block';
+  vehiclesDiv.style.display='block';
+  vehiclesDiv.querySelector('div:first-child').textContent='車両';
   openModal('cellAssignModal');
 }
 function renderCellAssignWorkers(){
   const asgList=assignments.filter(a=>a.task_id===cellAssignTid&&a.date===cellAssignDate);
   document.getElementById('cellAssignWorkers').innerHTML=fieldWorkers.map(w=>{
     const asg=asgList.find(a=>a.worker_id===w.id);
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${asg?'#dbeafe':'var(--bg)'};border:1px solid ${asg?'#93c5fd':'var(--border)'}">
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:${asg?'#dbeafe':'var(--bg)'};border:1px solid ${asg?'#93c5fd':'var(--border)'};font-size:12px">
       <span style="font-weight:${asg?700:400}">${w.name}</span>
-      <button class="btn btn-sm" style="background:${asg?'#ef4444':'var(--accent)'};color:#fff;padding:3px 12px" onclick="toggleAssignCell(${w.id})">
+      <button class="btn btn-sm" style="background:${asg?'#ef4444':'var(--accent)'};color:#fff;padding:2px 8px;font-size:11px" onclick="toggleAssignCell(${w.id})">
         ${asg?'解除':'配置'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function renderCellAssignVehicles(){
+  const siteVehicleAsg=getSiteVehicleAsg(cellAssignTid,cellAssignDate);
+  const allVehicles=loadVehicles();
+  document.getElementById('cellAssignVehicles').innerHTML=allVehicles.map(v=>{
+    const on=siteVehicleAsg.includes(v.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:${on?'#f3e8ff':'var(--bg)'};border:1px solid ${on?'#d8b4fe':'var(--border)'};font-size:12px">
+      <span style="font-weight:${on?700:400}">${v.name}</span>
+      <button class="btn btn-sm" style="background:${on?'#ef4444':'#9333ea'};color:#fff;padding:2px 8px;font-size:11px" onclick="toggleAssignCellVehicle('${v.id}')">
+        ${on?'解除':'配置'}
       </button>
     </div>`;
   }).join('');
@@ -1614,6 +1927,11 @@ async function toggleAssignCell(wid){
   const asg=assignments.find(a=>a.task_id===cellAssignTid&&a.date===cellAssignDate&&a.worker_id===wid);
   await toggleAssign(cellAssignTid,wid,cellAssignDate,asg?asg.id:null);
   renderCellAssignWorkers();
+}
+function toggleAssignCellVehicle(vid){
+  toggleSiteVehicleAsg(cellAssignTid,cellAssignDate,vid);
+  renderCellAssignVehicles();
+  renderAssign();
 }
 
 async function toggleAssign(tid,wid,date,asgId){
@@ -1918,12 +2236,14 @@ function renderVehicles(){
     el.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">🚗</div>車両が登録されていません</div>';
     return;
   }
-  el.innerHTML=`<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>メモ</th><th></th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>メモ</th><th>車検日</th><th>車検先</th><th></th></tr></thead><tbody>`+
     list.map(v=>`<tr>
       <td style="font-weight:700">${v.name}</td>
       <td>${v.type||'－'}</td>
       <td style="color:var(--text-muted)">${v.plate||'－'}</td>
       <td style="color:var(--text-muted)">${v.note||''}</td>
+      <td style="color:var(--text-muted)">${v.inspection?v.inspection.replace(/-/g,'/'):''}</td>
+      <td style="color:var(--text-muted)">${v.inspectionPlace||''}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')" style="margin-right:4px">編集</button>
         <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${v.id}')">削除</button>
@@ -1937,6 +2257,8 @@ function openVehicleModal(){
   document.getElementById('vehType').value='乗用車';
   document.getElementById('vehPlate').value='';
   document.getElementById('vehNote').value='';
+  document.getElementById('vehInspection').value='';
+  document.getElementById('vehInspectionPlace').value='';
   openModal('vehicleModal');
 }
 
@@ -1949,6 +2271,8 @@ function editVehicle(id){
   document.getElementById('vehType').value=v.type||'乗用車';
   document.getElementById('vehPlate').value=v.plate||'';
   document.getElementById('vehNote').value=v.note||'';
+  document.getElementById('vehInspection').value=v.inspection||'';
+  document.getElementById('vehInspectionPlace').value=v.inspectionPlace||'';
   openModal('vehicleModal');
 }
 
@@ -1960,6 +2284,8 @@ function saveVehicle(){
     type:document.getElementById('vehType').value,
     plate:document.getElementById('vehPlate').value.trim(),
     note:document.getElementById('vehNote').value.trim(),
+    inspection:document.getElementById('vehInspection').value.trim(),
+    inspectionPlace:document.getElementById('vehInspectionPlace').value.trim(),
   };
   const list=loadVehicles();
   if(editingVehicleId){
