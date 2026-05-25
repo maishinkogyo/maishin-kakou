@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>色サンプル</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; background: #f8fafc; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { margin-bottom: 30px; }
+    .color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .color-sample { border-radius: 12px; padding: 20px; text-align: center; }
+    .color-sample h3 { margin: 0 0 10px 0; font-size: 14px; }
+    .color-sample p { margin: 5px 0; font-size: 12px; }
+
+    /* エメラルド緑 */
+    .emerald { background: #d1fae5; color: #059669; }
+    .emerald-text { color: #059669; }
+
+    /* ティール緑 */
+    .teal { background: #f0fdfa; color: #0d9488; }
+    .teal-text { color: #0d9488; }
+
+    /* 現在の紫（参考） */
+    .purple { background: #f3e8ff; color: #7c3aed; }
+    .purple-text { color: #7c3aed; }
+
+    /* チップのサンプル */
+    .chips { margin-top: 30px; padding: 20px; background: white; border-radius: 12px; }
+    .chip { display: inline-block; padding: 4px 10px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: 600; }
+
+    .sample-row { margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>「休み」の色変更サンプル</h1>
+
+    <div class="color-grid">
+      <div class="color-sample emerald">
+        <h3>案1: エメラルド緑</h3>
+        <p>背景: #d1fae5</p>
+        <p>テキスト: #059669</p>
+      </div>
+
+      <div class="color-sample teal">
+        <h3>案2: ティール緑</h3>
+        <p>背景: #f0fdfa</p>
+        <p>テキスト: #0d9488</p>
+      </div>
+    </div>
+
+    <div class="chips">
+      <h3>配置表での表示イメージ</h3>
+
+      <div class="sample-row">
+        <strong>エメラルド緑（案1）:</strong><br>
+        <span class="chip" style="background: #d1fae5; color: #059669;">山田太郎</span>
+        <span class="chip" style="background: #d1fae5; color: #059669;">佐藤花子</span>
+      </div>
+
+      <div class="sample-row">
+        <strong>ティール緑（案2）:</strong><br>
+        <span class="chip" style="background: #f0fdfa; color: #0d9488;">山田太郎</span>
+        <span class="chip" style="background: #f0fdfa; color: #0d9488;">佐藤花子</span>
+      </div>
+
+      <div class="sample-row">
+        <strong>参考: 現在の紫（未使用）:</strong><br>
+        <span class="chip" style="background: #f3e8ff; color: #9333ea;">ハイエース</span>
+        <span class="chip" style="background: #f3e8ff; color: #9333ea;">軽バン</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

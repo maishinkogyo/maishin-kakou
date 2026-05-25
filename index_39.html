@@ -471,7 +471,7 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="side-nav-item" onclick="switchMainTab('production')"><span>📊</span><span class="nav-label">生産数量</span></div>
     <div class="side-nav-item" onclick="switchMainTab('report')"><span>📝</span><span class="nav-label">日報</span></div>
     <div class="side-nav-item" onclick="switchMainTab('unit-sales')"><span>🔗</span><span class="nav-label">ユニット販売</span></div>
-    <div class="side-nav-item" onclick="switchMainTab('master')"><span>🗂️</span><span class="nav-label">マスタ管理</span></div>
+    <a href="master.html" class="side-nav-item" style="text-decoration:none;color:var(--text-muted)"><span>📋</span><span class="nav-label">マスタ管理</span></a>
     <div class="side-nav-item" onclick="switchMainTab('done')"><span>✅</span><span class="nav-label">完了済み</span></div>
     <div style="border-top:1px solid var(--border);margin:8px 0"></div>
     <a href="genba.html" class="side-nav-item" style="text-decoration:none;color:var(--text-muted)"><span>🏗️</span><span class="nav-label">現場管理へ</span></a>
@@ -493,7 +493,6 @@ select:focus,input:focus{border-color:var(--accent);}
   <div class="main-tab" onclick="switchMainTab('gantt')">ガントチャート</div>
   <div class="main-tab" onclick="switchMainTab('production')">📊 生産数量</div>
   <div class="main-tab" onclick="switchMainTab('report')">📝 日報</div>
-  <div class="main-tab" onclick="switchMainTab('master')">📋 マスタ管理</div>
   <div class="main-tab" onclick="switchMainTab('done')">完了済み</div>
 </div>
 
@@ -597,19 +596,16 @@ select:focus,input:focus{border-color:var(--accent);}
 
 <!-- ══ 材料リスト ══ -->
 <!-- ══ マスタ管理 ══ -->
+<!-- 注：マスタ管理は独立した master.html で管理 -->
 <div class="main-content" id="tab-master">
-  <div class="task-list-wrap" style="padding-top:16px">
+  <div style="padding:40px;text-align:center;color:var(--text-muted);">
+    <p style="font-size:16px;margin-bottom:16px;">📋 マスタ管理は独立したアプリで管理しています</p>
+    <a href="master.html" class="btn btn-primary" style="text-decoration:none;display:inline-block;">マスタ管理へ移動</a>
+  </div>
+</div>
 
-    <!-- サブタブ -->
-    <div class="master-subtabs">
-      <div class="master-subtab active" onclick="switchMasterTab('tasks')">➕ 現場追加</div>
-      <div class="master-subtab" onclick="switchMasterTab('materials')">🔩 材料</div>
-      <div class="master-subtab" onclick="switchMasterTab('vehicles')">🚛 車両</div>
-      <div class="master-subtab" onclick="switchMasterTab('workers')">👤 作業者</div>
-      <div class="master-subtab" onclick="switchMasterTab('accessories')">📦 付属品</div>
-    </div>
-
-    <!-- タスク追加パネル -->
+<!-- 削除された古いマスタ管理UI -->
+<!--
     <div class="master-panel active" id="master-panel-tasks">
       <div style="margin-bottom:16px;">
         <div class="section-title" style="padding-top:0;margin-bottom:16px;">新規現場を追加</div>
@@ -766,6 +762,7 @@ select:focus,input:focus{border-color:var(--accent);}
 
   </div>
 </div>
+-->
 
 <!-- ══ 日報 ══ -->
 <div class="main-content" id="tab-report">

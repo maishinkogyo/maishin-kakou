@@ -1,0 +1,560 @@
+<!DOCTYPE html><html lang="ja">
+<head>
+<base href="/maishin-kakou/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>マイシン工業 マスタ管理</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--accent:#16a34a;--accent-light:#dcfce7;--bg:#f8fafc;--surface:#fff;--surface2:#f1f5f9;--border:#e2e8f0;--text:#1e293b;--text-muted:#64748b;--danger:#ef4444;--warn:#f59e0b;--sidebar-w:200px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+button{cursor:pointer;font-family:inherit;}
+input,select,textarea{font-family:inherit;font-size:14px;}
+
+#lockScreen{position:fixed;inset:0;background:linear-gradient(135deg,#14532d,#166534,#15803d);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.lock-card{background:#fff;border-radius:16px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
+.lock-logo{font-size:26px;font-weight:800;color:var(--accent);margin-bottom:4px;}
+.lock-sub{font-size:12px;color:var(--text-muted);margin-bottom:20px;}
+.lock-card input{width:100%;padding:12px 40px 12px 16px;border:2px solid var(--border);border-radius:8px;font-size:16px;outline:none;transition:border-color .2s;}
+.lock-card input:focus{border-color:var(--accent);}
+.lock-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;}
+.lock-btn:hover{background:#15803d;}
+#lockError{color:var(--danger);font-size:12px;margin-top:8px;min-height:16px;}
+
+#app{display:block;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid var(--border);}
+.logo-main{font-size:13px;font-weight:800;color:var(--accent);}
+.logo-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.sidebar-nav{flex:1;padding:8px;overflow-y:auto;}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);text-align:left;transition:all .15s;}
+.nav-btn:hover{background:var(--surface2);color:var(--text);}
+.nav-btn.active{background:var(--accent-light);color:var(--accent);font-weight:700;}
+.sidebar-footer{padding:12px 8px;border-top:1px solid var(--border);}
+.main-content{margin-left:var(--sidebar-w);flex:1;padding:24px;max-width:1100px;}
+
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px;}
+
+.master-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);}
+.master-tab{padding:12px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.master-tab:hover{color:var(--text);}
+.master-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+.master-panel{display:none;}
+.master-panel.active{display:block;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.card-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;justify-content:space-between;}
+.spacer{flex:1;}
+.btn{padding:8px 14px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#15803d;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--border);}
+.btn-danger{background:#fee2e2;color:var(--danger);border:1px solid #fca5a5;}
+.btn-danger:hover{background:#fecaca;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+.form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-muted);}
+.form-group input,.form-group select,.form-group textarea{padding:8px 12px;border:1px solid var(--border);border-radius:8px;outline:none;transition:border-color .2s;background:var(--surface);}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:2px solid var(--border);}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--surface2);}
+
+.empty{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
+.empty-icon{font-size:36px;margin-bottom:8px;}
+
+#flash{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9000;display:none;box-shadow:0 4px 16px rgba(0,0,0,.15);}
+
+@media(max-width:640px){
+  :root{--sidebar-w:0px;}
+  .sidebar{display:none;}
+  .main-content{margin-left:0;padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<div id="app" style="display:block">
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-main">マイシン工業</div>
+        <div class="logo-sub">マスタ管理</div>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-btn active" onclick="switchMasterTab('workers')" id="nav-workers"><span>👤</span> 従業員</button>
+        <button class="nav-btn" onclick="switchMasterTab('materials')" id="nav-materials"><span>🔩</span> 材料</button>
+        <button class="nav-btn" onclick="switchMasterTab('vehicles')" id="nav-vehicles"><span>🚗</span> 車両</button>
+        <button class="nav-btn" onclick="switchMasterTab('accessories')" id="nav-accessories"><span>📦</span> 付属品</button>
+        <button class="nav-btn" onclick="switchMasterTab('buyers')" id="nav-buyers"><span>🏢</span> 販売先</button>
+        <div style="border-top:1px solid var(--border);margin:8px 4px"></div>
+        <a href="index_39.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted)"><span>⚙️</span> 加工管理</a>
+        <a href="genba.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted)"><span>🏗️</span> 現場管理</a>
+      </div>
+      <div class="sidebar-footer">
+        <a href="index.html" class="nav-btn" style="text-decoration:none;display:flex;align-items:center;gap:8px;margin-bottom:4px"><span>🏠</span> ホーム</a>
+        <button class="nav-btn" onclick="lockApp()"><span>🔒</span> ロック</button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-title">🗂️ マスタ管理</div>
+
+      <!-- Workers Master -->
+      <div class="master-panel active" id="master-workers">
+        <div class="toolbar">
+          <h2 style="font-size:16px;font-weight:700;margin:0">👤 従業員マスタ</h2>
+          <button class="btn btn-primary btn-sm" onclick="openWorkerModal()">＋ 追加</button>
+        </div>
+        <div id="workerList" class="card"></div>
+      </div>
+
+      <!-- Materials Master -->
+      <div class="master-panel" id="master-materials">
+        <div class="toolbar">
+          <h2 style="font-size:16px;font-weight:700;margin:0">🔩 材料マスタ</h2>
+          <button class="btn btn-primary btn-sm" onclick="openMaterialModal()">＋ 追加</button>
+        </div>
+        <div id="materialList" class="card"></div>
+      </div>
+
+      <!-- Vehicles Master -->
+      <div class="master-panel" id="master-vehicles">
+        <div class="toolbar">
+          <h2 style="font-size:16px;font-weight:700;margin:0">🚗 車両マスタ</h2>
+          <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 追加</button>
+        </div>
+        <div id="vehicleList" class="card"></div>
+      </div>
+
+      <!-- Accessories Master -->
+      <div class="master-panel" id="master-accessories">
+        <div class="toolbar">
+          <h2 style="font-size:16px;font-weight:700;margin:0">📦 付属品マスタ</h2>
+          <button class="btn btn-primary btn-sm" onclick="openAccessoryModal()">＋ 追加</button>
+        </div>
+        <div id="accessoryList" class="card"></div>
+      </div>
+
+      <!-- Buyers Master -->
+      <div class="master-panel" id="master-buyers">
+        <div class="toolbar">
+          <h2 style="font-size:16px;font-weight:700;margin:0">🏢 販売先マスタ</h2>
+          <button class="btn btn-primary btn-sm" onclick="openBuyerModal()">＋ 追加</button>
+        </div>
+        <div id="buyerList" class="card"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Worker Modal -->
+<div class="modal-overlay" id="workerModal">
+  <div class="modal">
+    <div class="modal-title" id="workerModalTitle">従業員追加</div>
+    <input type="hidden" id="workerId">
+    <div class="form-row">
+      <div class="form-group"><label>氏名</label><input type="text" id="workerName" placeholder="山田 太郎"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('workerModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveWorker()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material Modal -->
+<div class="modal-overlay" id="materialModal">
+  <div class="modal">
+    <div class="modal-title" id="materialModalTitle">材料追加</div>
+    <input type="hidden" id="materialId">
+    <div class="form-row">
+      <div class="form-group"><label>材料名</label><input type="text" id="materialName" placeholder="例：SUS304"></div>
+      <div class="form-group"><label>メモ</label><input type="text" id="materialNote" placeholder="例：ステンレス鋼"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('materialModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveMaterial()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Modal -->
+<div class="modal-overlay" id="vehicleModal">
+  <div class="modal">
+    <div class="modal-title" id="vehicleModalTitle">車両追加</div>
+    <input type="hidden" id="vehicleId">
+    <div class="form-row">
+      <div class="form-group"><label>車両名</label><input type="text" id="vehicleName" placeholder="例：4tトラック"></div>
+      <div class="form-group"><label>種別</label><select id="vehicleType"><option value="乗用車">乗用車</option><option value="軽トラック">軽トラック</option><option value="2tトラック">2tトラック</option><option value="3tトラック">3tトラック</option><option value="4tトラック">4tトラック</option><option value="バン">バン</option><option value="大型">大型</option><option value="その他">その他</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ナンバー</label><input type="text" id="vehiclePlate" placeholder="鳥取 500 あ 1234"></div>
+      <div class="form-group"><label>メモ</label><input type="text" id="vehicleNote" placeholder=""></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>車検日</label><input type="date" id="vehicleInspection"></div>
+      <div class="form-group"><label>車検先</label><input type="text" id="vehicleInspectionPlace" placeholder="例：〇〇自動車検査登録事務所"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('vehicleModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Accessory Modal -->
+<div class="modal-overlay" id="accessoryModal">
+  <div class="modal">
+    <div class="modal-title" id="accessoryModalTitle">付属品追加</div>
+    <input type="hidden" id="accessoryId">
+    <div class="form-row">
+      <div class="form-group"><label>付属品名</label><input type="text" id="accessoryName" placeholder="例：アンカーボルト"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>仕様</label><input type="text" id="accessorySpec" placeholder="例：M12"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addAccessorySpec()" style="margin-top:20px">＋ 仕様追加</button>
+    </div>
+    <div id="accessorySpecs" style="margin-bottom:12px;display:flex;gap:4px;flex-wrap:wrap"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('accessoryModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveAccessory()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Buyer Modal -->
+<div class="modal-overlay" id="buyerModal">
+  <div class="modal">
+    <div class="modal-title" id="buyerModalTitle">販売先追加</div>
+    <input type="hidden" id="buyerId">
+    <div class="form-row">
+      <div class="form-group"><label>販売先名</label><input type="text" id="buyerName" placeholder="例：〇〇建設"></div>
+      <div class="form-group"><label>単価（¥/kg）</label><input type="number" id="buyerPrice" min="0" placeholder="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('buyerModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveBuyer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="flash">保存しました</div>
+
+<script>
+const SB_URL='https://eejudrgbzemtzzsffrgg.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlanVkcmdiemVtdHp6c2ZmcmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODU2MDksImV4cCI6MjA5MDM2MTYwOX0.ILiz-E7j_ZW52o0HHPxARGEUfUaXJ_-yDUFfBne2Fsc';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+// Data arrays
+let workers=[], materials=[], vehicles=[], accessories=[], buyers=[];
+let nextWorkerId=1, nextMatId=1, nextVehId=1, nextAccId=1, nextBuyerId=1;
+let currentAccessorySpecs=[];
+
+const STORAGE_KEY='masterAppData';
+
+// Load data on init
+async function initApp(){
+  try{
+    const[w,m,v,a,b]=await Promise.all([
+      sb.from('workers_list').select('*').order('sort_order'),
+      sb.from('materials').select('*').order('id'),
+      sb.from('vehicles').select('*'),
+      sb.from('accessories').select('*'),
+      sb.from('buyers').select('*')
+    ]);
+    workers=(w.data||[]).map(r=>({id:r.id,name:r.name}));
+    materials=(m.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
+    vehicles=(v.data||[]).map(r=>({id:r.id,name:r.name,type:r.type||'',plate:r.plate||'',inspection:r.inspection||'',inspection_place:r.inspection_place||'',note:r.note||''}));
+    accessories=(a.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
+    buyers=(b.data||[]).map(r=>({id:r.id,name:r.name,unit_price:r.unit_price||0}));
+    nextWorkerId=workers.length?Math.max(...workers.map(x=>x.id))+1:1;
+    nextMatId=materials.length?Math.max(...materials.map(x=>x.id))+1:1;
+    nextVehId=vehicles.length?Math.max(...vehicles.map(x=>x.id))+1:1;
+    nextAccId=accessories.length?Math.max(...accessories.map(x=>x.id))+1:1;
+    nextBuyerId=buyers.length?Math.max(...buyers.map(x=>x.id))+1:1;
+  }catch(e){console.warn('Supabase load error:',e);}
+  renderAll();
+}
+
+function switchMasterTab(tab){
+  document.querySelectorAll('.master-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('master-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// WORKERS
+function renderWorkers(){
+  const list=document.getElementById('workerList');
+  if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>`<tr><td>${w.name}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+}
+function openWorkerModal(id=null){
+  document.getElementById('workerId').value=id||'';
+  document.getElementById('workerName').value=id?workers.find(w=>w.id===id).name:'';
+  document.getElementById('workerModalTitle').textContent=id?'従業員編集':'従業員追加';
+  openModal('workerModal');
+}
+function saveWorker(){
+  const id=Number(document.getElementById('workerId').value);
+  const name=document.getElementById('workerName').value.trim();
+  if(!name){alert('氏名を入力してください');return;}
+  if(id){
+    const w=workers.find(x=>x.id===id);
+    w.name=name;
+    sb.from('workers_list').update({name}).eq('id',id).catch(e=>console.warn(e));
+  }else{
+    workers.push({id:nextWorkerId,name});
+    sb.from('workers_list').insert({id:nextWorkerId,name}).catch(e=>console.warn(e));
+    nextWorkerId++;
+  }
+  closeModal('workerModal');
+  flash();
+  renderWorkers();
+}
+function editWorker(id){openWorkerModal(id);}
+function deleteWorker(id){
+  if(!confirm('削除しますか？'))return;
+  workers=workers.filter(w=>w.id!==id);
+  sb.from('workers_list').delete().eq('id',id).catch(e=>console.warn(e));
+  flash();
+  renderWorkers();
+}
+
+// MATERIALS
+function renderMaterials(){
+  const list=document.getElementById('materialList');
+  if(!materials.length){list.innerHTML='<div class="empty"><div class="empty-icon">🔩</div>材料が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>材料名</th><th>メモ</th><th>操作</th></tr></thead><tbody>'+materials.map(m=>`<tr><td>${m.name}</td><td>${m.note||'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="editMaterial(${m.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteMaterial(${m.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+}
+function openMaterialModal(id=null){
+  const m=id?materials.find(x=>x.id===id):null;
+  document.getElementById('materialId').value=id||'';
+  document.getElementById('materialName').value=m?m.name:'';
+  document.getElementById('materialNote').value=m?m.note:'';
+  document.getElementById('materialModalTitle').textContent=id?'材料編集':'材料追加';
+  openModal('materialModal');
+}
+function saveMaterial(){
+  const id=Number(document.getElementById('materialId').value);
+  const name=document.getElementById('materialName').value.trim();
+  const note=document.getElementById('materialNote').value.trim();
+  if(!name){alert('材料名を入力してください');return;}
+  if(id){
+    const m=materials.find(x=>x.id===id);
+    m.name=name;m.note=note;
+    sb.from('materials').update({name,note}).eq('id',id).catch(e=>console.warn(e));
+  }else{
+    materials.push({id:nextMatId,name,note});
+    sb.from('materials').insert({id:nextMatId,name,note}).catch(e=>console.warn(e));
+    nextMatId++;
+  }
+  closeModal('materialModal');
+  flash();
+  renderMaterials();
+}
+function editMaterial(id){openMaterialModal(id);}
+function deleteMaterial(id){
+  if(!confirm('削除しますか？'))return;
+  materials=materials.filter(m=>m.id!==id);
+  sb.from('materials').delete().eq('id',id).catch(e=>console.warn(e));
+  flash();
+  renderMaterials();
+}
+
+// VEHICLES
+function renderVehicles(){
+  const list=document.getElementById('vehicleList');
+  if(!vehicles.length){list.innerHTML='<div class="empty"><div class="empty-icon">🚗</div>車両が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>車検日</th><th>操作</th></tr></thead><tbody>'+vehicles.map(v=>`<tr><td>${v.name}</td><td>${v.type||'-'}</td><td>${v.plate||'-'}</td><td>${v.inspection?v.inspection.replace(/-/g,'/'):'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="editVehicle(${v.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteVehicle(${v.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+}
+function openVehicleModal(id=null){
+  const v=id?vehicles.find(x=>x.id===id):null;
+  document.getElementById('vehicleId').value=id||'';
+  document.getElementById('vehicleName').value=v?v.name:'';
+  document.getElementById('vehicleType').value=v?v.type:'乗用車';
+  document.getElementById('vehiclePlate').value=v?v.plate:'';
+  document.getElementById('vehicleNote').value=v?v.note:'';
+  document.getElementById('vehicleInspection').value=v?v.inspection:'';
+  document.getElementById('vehicleInspectionPlace').value=v?v.inspection_place:'';
+  document.getElementById('vehicleModalTitle').textContent=id?'車両編集':'車両追加';
+  openModal('vehicleModal');
+}
+function saveVehicle(){
+  const id=Number(document.getElementById('vehicleId').value);
+  const name=document.getElementById('vehicleName').value.trim();
+  const type=document.getElementById('vehicleType').value;
+  const plate=document.getElementById('vehiclePlate').value.trim();
+  const note=document.getElementById('vehicleNote').value.trim();
+  const inspection=document.getElementById('vehicleInspection').value;
+  const inspection_place=document.getElementById('vehicleInspectionPlace').value.trim();
+  if(!name){alert('車両名を入力してください');return;}
+  if(id){
+    const v=vehicles.find(x=>x.id===id);
+    Object.assign(v,{name,type,plate,note,inspection,inspection_place});
+    sb.from('vehicles').update({name,type,plate,note,inspection,inspection_place}).eq('id',id).catch(e=>console.warn(e));
+  }else{
+    vehicles.push({id:nextVehId,name,type,plate,note,inspection,inspection_place});
+    sb.from('vehicles').insert({id:nextVehId,name,type,plate,note,inspection,inspection_place}).catch(e=>console.warn(e));
+    nextVehId++;
+  }
+  closeModal('vehicleModal');
+  flash();
+  renderVehicles();
+}
+function editVehicle(id){openVehicleModal(id);}
+function deleteVehicle(id){
+  if(!confirm('削除しますか？'))return;
+  vehicles=vehicles.filter(v=>v.id!==id);
+  sb.from('vehicles').delete().eq('id',id).catch(e=>console.warn(e));
+  flash();
+  renderVehicles();
+}
+
+// ACCESSORIES
+function renderAccessories(){
+  const list=document.getElementById('accessoryList');
+  if(!accessories.length){list.innerHTML='<div class="empty"><div class="empty-icon">📦</div>付属品が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>付属品名</th><th>仕様</th><th>操作</th></tr></thead><tbody>'+accessories.map(a=>{
+    let specs=[];
+    try{specs=JSON.parse(a.note);}catch{if(a.note)specs=[a.note];}
+    return`<tr><td>${a.name}</td><td>${specs.join(', ')||'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="editAccessory(${a.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteAccessory(${a.id})">削除</button></td></tr>`;
+  }).join('')+'</tbody></table>';
+}
+function openAccessoryModal(id=null){
+  const a=id?accessories.find(x=>x.id===id):null;
+  document.getElementById('accessoryId').value=id||'';
+  document.getElementById('accessoryName').value=a?a.name:'';
+  document.getElementById('accessorySpec').value='';
+  currentAccessorySpecs=[];
+  if(a&&a.note){try{currentAccessorySpecs=JSON.parse(a.note);}catch{if(a.note)currentAccessorySpecs=[a.note];}}
+  renderAccessorySpecs();
+  document.getElementById('accessoryModalTitle').textContent=id?'付属品編集':'付属品追加';
+  openModal('accessoryModal');
+}
+function renderAccessorySpecs(){
+  const cont=document.getElementById('accessorySpecs');
+  cont.innerHTML=currentAccessorySpecs.map((s,i)=>`<span class="chip">${s}<span class="chip-remove" onclick="removeAccessorySpec(${i})">✕</span></span>`).join('');
+}
+function addAccessorySpec(){
+  const spec=document.getElementById('accessorySpec').value.trim();
+  if(!spec)return;
+  currentAccessorySpecs.push(spec);
+  document.getElementById('accessorySpec').value='';
+  renderAccessorySpecs();
+}
+function removeAccessorySpec(i){
+  currentAccessorySpecs.splice(i,1);
+  renderAccessorySpecs();
+}
+function saveAccessory(){
+  const id=Number(document.getElementById('accessoryId').value);
+  const name=document.getElementById('accessoryName').value.trim();
+  const note=JSON.stringify(currentAccessorySpecs);
+  if(!name){alert('付属品名を入力してください');return;}
+  if(id){
+    const a=accessories.find(x=>x.id===id);
+    a.name=name;a.note=note;
+    sb.from('accessories').update({name,note}).eq('id',id).catch(e=>console.warn(e));
+  }else{
+    accessories.push({id:nextAccId,name,note});
+    sb.from('accessories').insert({id:nextAccId,name,note}).catch(e=>console.warn(e));
+    nextAccId++;
+  }
+  closeModal('accessoryModal');
+  flash();
+  renderAccessories();
+}
+function editAccessory(id){openAccessoryModal(id);}
+function deleteAccessory(id){
+  if(!confirm('削除しますか？'))return;
+  accessories=accessories.filter(a=>a.id!==id);
+  sb.from('accessories').delete().eq('id',id).catch(e=>console.warn(e));
+  flash();
+  renderAccessories();
+}
+
+// BUYERS
+function renderBuyers(){
+  const list=document.getElementById('buyerList');
+  if(!buyers.length){list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div>販売先が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>販売先名</th><th>単価</th><th>操作</th></tr></thead><tbody>'+buyers.map(b=>`<tr><td>${b.name}</td><td>¥${b.unit_price.toLocaleString()}/kg</td><td><button class="btn btn-secondary btn-sm" onclick="editBuyer(${b.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteBuyer(${b.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+}
+function openBuyerModal(id=null){
+  const b=id?buyers.find(x=>x.id===id):null;
+  document.getElementById('buyerId').value=id||'';
+  document.getElementById('buyerName').value=b?b.name:'';
+  document.getElementById('buyerPrice').value=b?b.unit_price:0;
+  document.getElementById('buyerModalTitle').textContent=id?'販売先編集':'販売先追加';
+  openModal('buyerModal');
+}
+function saveBuyer(){
+  const id=Number(document.getElementById('buyerId').value);
+  const name=document.getElementById('buyerName').value.trim();
+  const unit_price=Number(document.getElementById('buyerPrice').value)||0;
+  if(!name){alert('販売先名を入力してください');return;}
+  if(id){
+    const b=buyers.find(x=>x.id===id);
+    b.name=name;b.unit_price=unit_price;
+    sb.from('buyers').update({name,unit_price}).eq('id',id).catch(e=>console.warn(e));
+  }else{
+    buyers.push({id:nextBuyerId,name,unit_price});
+    sb.from('buyers').insert({id:nextBuyerId,name,unit_price}).catch(e=>console.warn(e));
+    nextBuyerId++;
+  }
+  closeModal('buyerModal');
+  flash();
+  renderBuyers();
+}
+function editBuyer(id){openBuyerModal(id);}
+function deleteBuyer(id){
+  if(!confirm('削除しますか？'))return;
+  buyers=buyers.filter(b=>b.id!==id);
+  sb.from('buyers').delete().eq('id',id).catch(e=>console.warn(e));
+  flash();
+  renderBuyers();
+}
+
+// UTILS
+function renderAll(){
+  renderWorkers();
+  renderMaterials();
+  renderVehicles();
+  renderAccessories();
+  renderBuyers();
+}
+
+function flash(){
+  const el=document.getElementById('flash');
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',2000);
+}
+
+function lockApp(){window.location.href='index.html';}
+
+// Init on load
+window.addEventListener('load',initApp);
+</script>
+</body>
+</html>

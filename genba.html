@@ -158,6 +158,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         <button class="nav-btn" onclick="showPage('costs')" id="nav-costs"><span>💰</span> 原価管理</button>
         <button class="nav-btn" onclick="showPage('settings')" id="nav-settings"><span>⚙️</span> 設定</button>
         <div style="border-top:1px solid var(--border);margin:8px 4px"></div>
+        <a href="master.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted)"><span>📋</span> マスタ管理</a>
         <a href="index_39.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted)"><span>⚙️</span> 加工管理へ</a>
       </div>
       <div class="sidebar-footer">
@@ -279,28 +280,11 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         <div class="page-title">設定</div>
         <div class="page-desc"></div>
 
-        <!-- マスタ管理ボタン群 -->
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
-          <button class="btn btn-secondary" style="font-size:14px;padding:12px 24px;border-radius:10px;font-weight:600" onclick="toggleSettingsPanel('workers')">👷 従業員マスタ</button>
-          <button class="btn btn-secondary" style="font-size:14px;padding:12px 24px;border-radius:10px;font-weight:600" onclick="toggleSettingsPanel('vehicles')">🚗 車両マスタ</button>
-        </div>
-
-        <!-- 従業員マスタパネル -->
-        <div class="card" id="settingsPanel-workers" style="margin-bottom:20px;display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:0">👷 従業員マスタ</div>
-            <button class="btn btn-primary btn-sm" onclick="openWorkerModal()">＋ 追加</button>
-          </div>
-          <div id="workerList"></div>
-        </div>
-
-        <!-- 車両マスタパネル -->
-        <div class="card" id="settingsPanel-vehicles" style="margin-bottom:20px;display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:0">🚗 車両マスタ</div>
-            <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 追加</button>
-          </div>
-          <div id="vehicleList"></div>
+        <!-- マスタ管理は独立したアプリで管理 -->
+        <div class="card" style="margin-bottom:20px;background:var(--accent-light);border-color:var(--accent)">
+          <div class="card-title">📋 マスタ管理</div>
+          <p style="font-size:13px;margin-bottom:12px;">マスタデータ（従業員・車両など）は独立したアプリで一元管理しています</p>
+          <a href="master.html" class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-block;">マスタ管理へ移動 →</a>
         </div>
 
         <div class="card">
@@ -631,18 +615,39 @@ async function initApp(){
   try{
     // localStorage から tasks を読み込む（加工アプリと連携）
     tasks=loadTasksFromStorage();
+
+    // localStorage が空の場合は Supabase から復元を試みる
+    if(!tasks.length){
+      try{
+        const{data,error}=await sb.from('genba_tasks').select('*');
+        if(!error&&data){
+          tasks=data.map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||''}));
+          // 復元したデータを localStorage に保存
+          saveTasksToStorage();
+          console.log('Supabase から tasks を復元しました');
+        }
+      }catch(e){console.warn('Supabase から tasks 復元失敗:',e);}
+    }
+
     // 他のデータは Supabase から（オプション）
     try{
-      const[fw,asg,wr,c]=await Promise.all([
+      const[fw,asg,wr,c,veh]=await Promise.all([
         sb.from('field_workers').select('*').order('name'),
         sb.from('field_assignments').select('*'),
         sb.from('field_work_records').select('*').order('date',{ascending:false}),
         sb.from('field_costs').select('*').order('date',{ascending:false}),
+        sb.from('vehicles').select('*'),
       ]);
       fieldWorkers=fw.data||[];
       assignments=asg.data||[];
       workRecords=wr.data||[];
       costs=c.data||[];
+      // vehicles を localStorage に保存
+      if(veh.data){
+        const vehicles=veh.data.map(v=>({id:v.id,name:v.name,type:v.type,plate:v.plate,inspection:v.inspection,inspection_place:v.inspection_place,note:v.note}));
+        saveVehicles(vehicles);
+        console.log('Supabase から vehicles を読み込んで localStorage に保存しました');
+      }
     }catch(e){console.warn('Supabase接続エラー、ローカルデータのみ使用します:',e);}
   }catch(e){console.error(e);}
   hideLoading();
