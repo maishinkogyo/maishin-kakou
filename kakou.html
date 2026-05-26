@@ -433,6 +433,41 @@ select:focus,input:focus{border-color:var(--accent);}
 
 <!-- ── Lock Screen ── -->
 <!-- ══ 現場編集モーダル ══ -->
+<!-- ══ 現場追加モーダル ══ -->
+<div class="task-modal-overlay" id="addTaskModal" style="display:none;" onclick="if(event.target.id==='addTaskModal')closeAddTaskModal()">
+  <div class="task-modal" onclick="event.stopPropagation()">
+    <div class="task-modal-header">
+      <span class="task-modal-title">➕ 新規現場を追加</span>
+      <button onclick="closeAddTaskModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:2px 6px;">✕</button>
+    </div>
+    <div class="task-modal-body">
+      <div class="form-group"><label>メイン項目</label><input type="text" id="newNameMain" placeholder="例：米子体育館"></div>
+      <div class="form-group"><label>サブ項目</label><input type="text" id="newNameSub" placeholder="例：２階（任意）"></div>
+      <div class="form-group"><label>部門</label>
+        <select id="newDept">
+          <option value="">未設定</option>
+          <option value="建築">建築</option>
+          <option value="土木">土木</option>
+          <option value="住宅基礎">住宅基礎</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="form-group"><label>優先度</label>
+        <select id="newPriority"><option value="1">1（高）</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select>
+      </div>
+      <div class="form-group"><label>総kg数</label><input type="number" id="newTotal" placeholder="1000" min="0"></div>
+      <div class="form-group"><label>開始日</label><input type="date" id="newStart"></div>
+      <div class="form-group"><label>納期</label><input type="date" id="newDeadline"></div>
+      <div class="form-group"><label>材料名</label><select id="newMaterial"><option value="">未設定</option></select></div>
+      <div class="form-group"><label>作業者</label><select id="newWorker"><option value="">未割当</option></select></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="closeAddTaskModal()">キャンセル</button>
+      <button class="btn btn-primary btn-sm" onclick="addTask();closeAddTaskModal();">追加</button>
+    </div>
+  </div>
+</div>
+
 <div class="task-modal-overlay" id="taskModal" style="display:none;" onclick="closeTaskModal(event)">
   <div class="task-modal" onclick="event.stopPropagation()">
     <div class="task-modal-header">
@@ -515,7 +550,10 @@ select:focus,input:focus{border-color:var(--accent);}
     <div><div class="next-task-name" id="nextTaskName">-</div><div class="next-task-meta" id="nextTaskMeta">-</div></div>
   </div>
   <div class="task-list-wrap">
-    <div class="section-title">現場一覧（優先度順）</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="section-title" style="margin-bottom:0">現場一覧（優先度順）</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">＋ 現場追加</button>
+    </div>
     <div id="taskList"></div>
   </div>
 </div>
@@ -1823,6 +1861,26 @@ function toggleTaskWorker(id,w){
 }
 
 function toggleExpand(id){ openTaskModal(id); }
+
+// Add Task Modal
+function openAddTaskModal(){
+  document.getElementById('newNameMain').value='';
+  document.getElementById('newNameSub').value='';
+  document.getElementById('newDept').value='';
+  document.getElementById('newPriority').value='3';
+  document.getElementById('newTotal').value='';
+  document.getElementById('newStart').value='';
+  document.getElementById('newDeadline').value='';
+  document.getElementById('newMaterial').value='';
+  document.getElementById('newWorker').value='';
+  document.getElementById('addTaskModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closeAddTaskModal(){
+  document.getElementById('addTaskModal').style.display='none';
+  document.body.style.overflow='';
+}
 
 function openTaskModal(id){
   const t=tasks.find(t=>t.id===id); if(!t) return;
