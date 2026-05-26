@@ -1787,6 +1787,7 @@ function taskDetailHTML(t){
       <div class="detail-field"><label>完了kg数（手動修正）</label><input type="number" value="${t.done}" min="0" max="${t.total}" onchange="updateField(${t.id},'done',Number(this.value))"></div>
       <div class="detail-field"><label>開始日</label><input type="date" value="${t.start||''}" onchange="updateField(${t.id},'start',this.value)"></div>
       <div class="detail-field"><label>納期</label><input type="date" value="${t.deadline||''}" onchange="updateField(${t.id},'deadline',this.value)"></div>
+      <div class="detail-field"><label>請会社</label><input type="text" value="${t.client||''}" placeholder="会社名（任意）" onchange="updateField(${t.id},'client',this.value)"></div>
       <div class="detail-field" style="grid-column:1/-1"><label>作業者（複数選択可）</label><div class="wchip-group">${wChips}</div></div>
 
       <!-- 運搬ログ -->
