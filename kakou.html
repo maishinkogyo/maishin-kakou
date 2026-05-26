@@ -440,7 +440,7 @@ select:focus,input:focus{border-color:var(--accent);}
       <span class="task-modal-title">➕ 新規現場を追加</span>
       <button onclick="closeAddTaskModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:2px 6px;">✕</button>
     </div>
-    <div class="task-modal-body">
+    <div class="task-modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;grid-auto-flow:dense;">
       <div class="form-group"><label>メイン項目</label><input type="text" id="newNameMain" placeholder="例：米子体育館"></div>
       <div class="form-group"><label>サブ項目</label><input type="text" id="newNameSub" placeholder="例：２階（任意）"></div>
       <div class="form-group"><label>部門</label>
@@ -460,33 +460,33 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="form-group"><label>納期</label><input type="date" id="newDeadline"></div>
       <div class="form-group"><label>材料名</label><select id="newMaterial"><option value="">未設定</option></select></div>
       <div class="form-group"><label>作業者</label><select id="newWorker"><option value="">未割当</option></select></div>
-      <div class="form-group"><label>ユニット</label>
-        <div class="unit-tabs" id="newUnitTabs" style="display:flex;gap:8px;flex-wrap:wrap;">
-          <span class="unit-tab none-tab active" onclick="selectUnitTab('new','none',this)" style="padding:6px 12px;border-radius:6px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;font-size:12px;">なし</span>
-          <span class="unit-tab" onclick="selectUnitTab('new','full',this)" style="padding:6px 12px;border-radius:6px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;font-size:12px;">マイシングレード</span>
-          <span class="unit-tab" onclick="selectUnitTab('new','outer',this)" style="padding:6px 12px;border-radius:6px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;font-size:12px;">外周のみ</span>
-          <span class="unit-tab" onclick="selectUnitTab('new','other',this)" style="padding:6px 12px;border-radius:6px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;font-size:12px;">その他ユニット</span>
+      <div class="form-group" style="grid-column:1/-1"><label>ユニット</label>
+        <div class="unit-tabs" id="newUnitTabs">
+          <span class="unit-tab none-tab active" onclick="selectUnitTab('new','none',this)">なし</span>
+          <span class="unit-tab" onclick="selectUnitTab('new','full',this)">マイシングレード</span>
+          <span class="unit-tab" onclick="selectUnitTab('new','outer',this)">外周のみ</span>
+          <span class="unit-tab" onclick="selectUnitTab('new','other',this)">その他ユニット</span>
         </div>
         <input type="hidden" id="newUnitType" value="none">
-        <input type="text" id="newUnitOtherNote" placeholder="その他ユニットの内容" style="display:none;margin-top:6px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+        <input type="text" id="newUnitOtherNote" placeholder="その他ユニットの内容" style="display:none;margin-top:6px;width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
       </div>
-      <div id="newSaleInfo" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:4px;grid-column:1/-1;">
+      <div id="newSaleInfo" style="display:none;grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:4px;">
         <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">🔗 ユニット販売情報（未出荷として仮計上）</div>
         <div style="display:grid;grid-template-columns:1fr 130px 130px;gap:8px;align-items:end;">
           <div class="form-group" style="margin:0"><label>販売先</label>
-            <select id="newSaleBuyer" onchange="calcNewSaleAmount()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+            <select id="newSaleBuyer" onchange="calcNewSaleAmount()" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
               <option value="">選択してください</option>
             </select>
           </div>
           <div class="form-group" style="margin:0"><label>kg数</label>
             <div style="display:flex;align-items:center;gap:4px;">
-              <input type="number" id="newSaleKg" placeholder="0" min="0" step="0.1" oninput="calcNewSaleAmount()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+              <input type="number" id="newSaleKg" placeholder="0" min="0" step="0.1" oninput="calcNewSaleAmount()">
               <span style="font-size:12px;color:var(--text-muted)">kg</span>
             </div>
           </div>
           <div class="form-group" style="margin:0"><label>金額（自動計算）</label>
             <div style="display:flex;align-items:center;gap:4px;">
-              <input type="number" id="newSaleAmount" placeholder="0" min="0" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+              <input type="number" id="newSaleAmount" placeholder="0" min="0">
               <span style="font-size:12px;color:var(--text-muted)">円</span>
             </div>
           </div>
