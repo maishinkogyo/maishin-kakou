@@ -286,16 +286,6 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <p style="font-size:13px;margin-bottom:12px;">マスタデータ（従業員・車両など）は独立したアプリで一元管理しています</p>
           <a href="master.html" class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-block;">マスタ管理へ移動 →</a>
         </div>
-
-        <div class="card">
-          <div class="card-title">パスワード変更</div>
-          <div class="form-row">
-            <div class="form-group"><label>現在のパスワード</label><input type="password" id="pwCurrent"></div>
-            <div class="form-group"><label>新しいパスワード</label><input type="password" id="pwNew"></div>
-            <div class="form-group"><label>確認</label><input type="password" id="pwConfirm"></div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="changePw()">変更する</button>
-        </div>
       </div>
 
     </main>
@@ -591,22 +581,8 @@ function saveTasksToStorage(){
   }catch{}
 }
 
-// ── Auth ──
-const PW_KEY='genba_pw';
-const PW_DEFAULT='1234';
-
-function hashPw(pw){let h=0;for(let i=0;i<pw.length;i++){h=Math.imul(31,h)+pw.charCodeAt(i)|0;}return h.toString(36)+'_'+pw.length;}
-function getStoredHash(){return localStorage.getItem(PW_KEY)||hashPw(PW_DEFAULT);}
+// ── Nav ──
 function lockApp(){window.location.href='index.html';}
-function changePw(){
-  const cur=document.getElementById('pwCurrent').value,nw=document.getElementById('pwNew').value,cf=document.getElementById('pwConfirm').value;
-  if(hashPw(cur)!==getStoredHash()){alert('現在のパスワードが違います');return;}
-  if(nw.length<4){alert('4文字以上で設定してください');return;}
-  if(nw!==cf){alert('新しいパスワードが一致しません');return;}
-  localStorage.setItem(PW_KEY,hashPw(nw));
-  alert('パスワードを変更しました');
-  ['pwCurrent','pwNew','pwConfirm'].forEach(id=>document.getElementById(id).value='');
-}
 
 // ── Init ──
 async function initApp(){
