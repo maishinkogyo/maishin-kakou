@@ -557,7 +557,11 @@ const STORAGE_KEY='taskManager_v1'; // 加工アプリと同じキー
 function loadTasksFromStorage(){
   try{
     const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
-    return(data.tasks||[]).map(x=>({...x,nameMain:x.name_main||x.nameMain||'',nameSub:x.name_sub||x.nameSub||''}));
+    return(data.tasks||[]).map(x=>{
+      // ユニット関連フィールドを除外
+      const {unitType,unitOtherNote,unitあり,...rest}=x;
+      return{...rest,nameMain:x.name_main||x.nameMain||'',nameSub:x.name_sub||x.nameSub||''};
+    });
   }catch{return[];}
 }
 function saveTasksToStorage(){
@@ -584,7 +588,11 @@ async function initApp(){
       try{
         const{data,error}=await sb.from('genba_tasks').select('*');
         if(!error&&data){
-          tasks=data.map(x=>({...x,nameMain:x.name_main||'',nameSub:x.name_sub||''}));
+          tasks=data.map(x=>{
+            // ユニット関連フィールドを除外
+            const {unitType,unitOtherNote,unitあり,...rest}=x;
+            return{...rest,nameMain:x.name_main||'',nameSub:x.name_sub||''};
+          });
           // 復元したデータを localStorage に保存
           saveTasksToStorage();
           console.log('Supabase から tasks を復元しました');
