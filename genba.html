@@ -435,27 +435,14 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>作業者</label>
         <select id="siteWorker"><option value="">未割当</option></select>
       </div>
+      <div class="form-group"><label>状態</label>
+        <select id="siteStatus">
+          <option value="未着手">未着手</option>
+          <option value="進行中">進行中</option>
+        </select>
+      </div>
+    </div>
       <div class="form-group"><label>請会社</label><input type="text" id="siteClient" placeholder="会社名"></div>
-    </div>
-    <div class="form-group" style="margin-bottom:8px">
-      <label>ユニット</label>
-      <div class="unit-tabs" id="siteUnitTabs">
-        <span class="unit-tab none-tab active" onclick="selectSiteUnitTab('none',this)">なし</span>
-        <span class="unit-tab" onclick="selectSiteUnitTab('full',this)">マイシングレード</span>
-        <span class="unit-tab" onclick="selectSiteUnitTab('outer',this)">外周のみ</span>
-        <span class="unit-tab" onclick="selectSiteUnitTab('other',this)">その他ユニット</span>
-      </div>
-      <input type="hidden" id="siteUnitType" value="none">
-      <input type="text" id="siteUnitOtherNote" placeholder="その他ユニットの内容"
-        style="display:none;margin-top:6px;width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
-    </div>
-    <div id="siteSaleInfo" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">🔗 ユニット販売情報</div>
-      <div class="form-row" style="margin:0;gap:8px">
-        <div class="form-group" style="margin:0"><label>販売先</label><input type="text" id="siteSaleBuyer" placeholder="販売先"></div>
-        <div class="form-group" style="margin:0"><label>kg数</label><input type="number" id="siteSaleKg" placeholder="0" min="0" step="0.1"></div>
-        <div class="form-group" style="margin:0"><label>金額（円）</label><input type="number" id="siteSaleAmount" placeholder="0" min="0"></div>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('siteModal')">キャンセル</button>
@@ -560,7 +547,10 @@ function loadTasksFromStorage(){
     return(data.tasks||[]).map(x=>{
       // ユニット関連フィールドを除外
       const {unitType,unitOtherNote,unitあり,...rest}=x;
-      return{...rest,nameMain:x.name_main||x.nameMain||'',nameSub:x.name_sub||x.nameSub||''};
+      const task={...rest,nameMain:x.name_main||x.nameMain||'',nameSub:x.name_sub||x.nameSub||''};
+      // ステータスがない場合は「未着手」をデフォルトにする
+      if(!task.status)task.status='未着手';
+      return task;
     });
   }catch{return[];}
 }
@@ -591,7 +581,10 @@ async function initApp(){
           tasks=data.map(x=>{
             // ユニット関連フィールドを除外
             const {unitType,unitOtherNote,unitあり,...rest}=x;
-            return{...rest,nameMain:x.name_main||'',nameSub:x.name_sub||''};
+            const task={...rest,nameMain:x.name_main||'',nameSub:x.name_sub||''};
+            // ステータスがない場合は「未着手」をデフォルトにする
+            if(!task.status)task.status='未着手';
+            return task;
           });
           // 復元したデータを localStorage に保存
           saveTasksToStorage();
@@ -749,10 +742,11 @@ function renderSites(){
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
         ${t.deadline?`<span class="badge ${deadlineCls(t.deadline)}">📅 ${fmt(t.deadline)}</span>`:(t.start_date?`<span class="badge">📅 ${fmt(t.start_date)}</span>`:'')}
         ${overdueDays>0?`<span class="badge red">${overdueDays}日超過</span>`:''}
+        ${t.status==='進行中'?`<span class="badge green">⏳ 進行中</span>`:''}
+        ${t.status==='未着手'&&!t.complete?`<span class="badge amber">⭕ 未着手</span>`:''}
         ${meta.dept?`<span class="badge">${meta.dept}</span>`:''}
         ${meta.priority?`<span class="badge">優先度${meta.priority}</span>`:''}
         ${meta.material?`<span class="badge blue">${meta.material}</span>`:''}
-        ${meta.unitType&&meta.unitType!=='none'?`<span class="badge purple">${meta.unitType==='full'?'マイシングレード':meta.unitType==='outer'?'外周のみ':meta.unitOtherNote||'その他'}</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
       </div>
       <!-- kg表示 -->
@@ -780,16 +774,6 @@ function openSiteModal(id=null){
   // 作業者セレクト更新
   const wsel=document.getElementById('siteWorker');
   wsel.innerHTML='<option value="">未割当</option>'+fieldWorkers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
-  // フォームリセット用ヘルパー
-  function setUnitTab(type){
-    document.querySelectorAll('#siteUnitTabs .unit-tab').forEach(t=>t.classList.remove('active'));
-    const tab=[...document.querySelectorAll('#siteUnitTabs .unit-tab')].find(t=>t.getAttribute('onclick').includes("'"+type+"'"));
-    if(tab)tab.classList.add('active');
-    else document.querySelector('#siteUnitTabs .none-tab').classList.add('active');
-    document.getElementById('siteUnitType').value=type;
-    document.getElementById('siteUnitOtherNote').style.display=type==='other'?'block':'none';
-    document.getElementById('siteSaleInfo').style.display=type!=='none'?'block':'none';
-  }
   // 編集時のみ完了・削除ボタンを表示
   const actions=document.getElementById('siteModalActions');
   actions.style.display=id?'flex':'none';
@@ -810,12 +794,8 @@ function openSiteModal(id=null){
     document.getElementById('sitePriority').value=meta.priority||'3';
     document.getElementById('siteMaterial').value=meta.material||'';
     document.getElementById('siteWorker').value=meta.workerId||'';
+    document.getElementById('siteStatus').value=meta.status||t.status||'未着手';
     document.getElementById('siteClient').value=meta.client||'';
-    document.getElementById('siteUnitOtherNote').value=meta.unitOtherNote||'';
-    document.getElementById('siteSaleBuyer').value=meta.saleBuyer||'';
-    document.getElementById('siteSaleKg').value=meta.saleKg||'';
-    document.getElementById('siteSaleAmount').value=meta.saleAmount||'';
-    setUnitTab(meta.unitType||'none');
   }else{
     document.getElementById('siteId').value='';
     document.getElementById('siteName').value='';
@@ -827,12 +807,8 @@ function openSiteModal(id=null){
     document.getElementById('sitePriority').value='3';
     document.getElementById('siteMaterial').value='';
     document.getElementById('siteWorker').value='';
+    document.getElementById('siteStatus').value='未着手';
     document.getElementById('siteClient').value='';
-    document.getElementById('siteUnitOtherNote').value='';
-    document.getElementById('siteSaleBuyer').value='';
-    document.getElementById('siteSaleKg').value='';
-    document.getElementById('siteSaleAmount').value='';
-    setUnitTab('none');
   }
   openModal('siteModal');
 }
@@ -846,14 +822,6 @@ function loadMetaMap(){try{return JSON.parse(localStorage.getItem('genba_task_me
 function saveMetaMap(m){localStorage.setItem('genba_task_meta',JSON.stringify(m))}
 function getTaskMeta(id){return loadMetaMap()[String(id)]||{}}
 function setTaskMeta(id,meta){const m=loadMetaMap();m[String(id)]={...m[String(id)],...meta};saveMetaMap(m);}
-// ユニットタブ
-function selectSiteUnitTab(type,el){
-  document.querySelectorAll('#siteUnitTabs .unit-tab').forEach(t=>t.classList.remove('active'));
-  if(el)el.classList.add('active');
-  document.getElementById('siteUnitType').value=type;
-  document.getElementById('siteUnitOtherNote').style.display=type==='other'?'block':'none';
-  document.getElementById('siteSaleInfo').style.display=type!=='none'?'block':'none';
-}
 
 async function saveSite(){
   const name_main=document.getElementById('siteName').value.trim();
@@ -862,28 +830,25 @@ async function saveSite(){
   const start_date=document.getElementById('siteStart').value||null;
   const deadline=document.getElementById('siteDeadline').value||null;
   const total_kg=Number(document.getElementById('siteTotalKg').value)||0;
+  const status=document.getElementById('siteStatus').value||'未着手';
   const meta={
     dept:document.getElementById('siteDept').value,
     priority:document.getElementById('sitePriority').value,
     material:document.getElementById('siteMaterial').value.trim(),
     workerId:document.getElementById('siteWorker').value,
+    status:status,
     client:document.getElementById('siteClient').value.trim(),
-    unitType:document.getElementById('siteUnitType').value,
-    unitOtherNote:document.getElementById('siteUnitOtherNote').value.trim(),
-    saleBuyer:document.getElementById('siteSaleBuyer').value.trim(),
-    saleKg:document.getElementById('siteSaleKg').value,
-    saleAmount:document.getElementById('siteSaleAmount').value,
   };
   if(editingSiteId){
     const t=tasks.find(x=>x.id===editingSiteId);
-    Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg});
+    Object.assign(t,{nameMain:name_main,nameSub:name_sub,name_main,name_sub,start_date,deadline,total_kg,status});
     setTaskKg(editingSiteId,total_kg);
     setTaskMeta(editingSiteId,meta);
     // Supabase 更新（オプション）
     try{await sb.from('genba_tasks').update({name_main,name_sub,start_date,deadline}).eq('id',editingSiteId);}catch(e){console.warn(e);}
   }else{
     const num=tasks.length?Math.max(...tasks.map(x=>x.num||0))+1:1;
-    const newTask={name_main,name_sub,start_date,deadline,complete:false,num,nameMain:name_main,nameSub:name_sub||'',total_kg,id:Math.max(...tasks.map(x=>x.id||0),0)+1};
+    const newTask={name_main,name_sub,start_date,deadline,complete:false,num,nameMain:name_main,nameSub:name_sub||'',total_kg,status,id:Math.max(...tasks.map(x=>x.id||0),0)+1};
     tasks.push(newTask);
     setTaskKg(newTask.id,total_kg);
     setTaskMeta(newTask.id,meta);
@@ -2084,11 +2049,25 @@ function renderGantt(){
     }
 
     const isOverdue=t.deadline&&t.deadline<todayStr2&&!t.complete;
-    const barColor=t.complete?'#94a3b8':isOverdue?'#ef4444':'var(--accent)';
-    const barLabel=t.complete?'完了':isOverdue?'超過':'';
+    let barColor,barLabel;
+    if(t.complete){
+      barColor='#94a3b8';
+      barLabel='完了';
+    }else if(isOverdue){
+      barColor='#ef4444';
+      barLabel='超過';
+    }else if(t.status==='未着手'){
+      barColor='#fed7aa';
+      barLabel='未着手';
+    }else{
+      barColor='var(--accent)';
+      barLabel='';
+    }
 
+    // 背景色が明るい場合は濃いテキスト、暗い場合は白いテキスト
+    const textColor=barColor==='#fed7aa'?'#d97706':'#fff';
     const bar=barLeft!==null&&barWidth>0?`<div style="position:absolute;left:${barLeft}px;width:${barWidth}px;top:8px;height:24px;background:${barColor};border-radius:4px;display:flex;align-items:center;padding:0 6px;overflow:hidden;opacity:${t.complete?0.6:1}" title="${taskName(t)}${start?' 開始:'+t.start_date:''}${end?' 期限:'+t.deadline:''}">
-        <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap">${barLabel}</span>
+        <span style="color:${textColor};font-size:10px;font-weight:700;white-space:nowrap">${barLabel}</span>
       </div>`:'';
 
     // 今日ライン（表示範囲内なら）
@@ -2129,6 +2108,7 @@ function renderGantt(){
     </div>
     <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-muted)">
       <span><span style="display:inline-block;width:12px;height:12px;background:var(--accent);border-radius:2px;margin-right:4px;vertical-align:middle"></span>進行中</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#fed7aa;border-radius:2px;margin-right:4px;vertical-align:middle"></span>未着手</span>
       <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;margin-right:4px;vertical-align:middle"></span>期限超過</span>
       <span><span style="display:inline-block;width:12px;height:12px;background:#94a3b8;border-radius:2px;margin-right:4px;vertical-align:middle"></span>完了</span>
       <span><span style="display:inline-block;width:2px;height:12px;background:rgba(239,68,68,0.5);margin-right:4px;vertical-align:middle"></span>今日</span>

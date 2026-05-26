@@ -460,6 +460,7 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="form-group"><label>納期</label><input type="date" id="newDeadline"></div>
       <div class="form-group"><label>材料名</label><select id="newMaterial"><option value="">未設定</option></select></div>
       <div class="form-group"><label>作業者</label><select id="newWorker"><option value="">未割当</option></select></div>
+      <div class="form-group"><label>請会社</label><input type="text" id="newClient" placeholder="会社名（任意）"></div>
       <div class="form-group" style="grid-column:1/-1"><label>ユニット</label>
         <div class="unit-tabs" id="newUnitTabs">
           <span class="unit-tab none-tab active" onclick="selectUnitTab('new','none',this)">なし</span>
@@ -1895,6 +1896,7 @@ function openAddTaskModal(){
   document.getElementById('newDeadline').value='';
   document.getElementById('newMaterial').value='';
   document.getElementById('newWorker').value='';
+  document.getElementById('newClient').value='';
   document.getElementById('addTaskModal').style.display='flex';
   document.body.style.overflow='hidden';
 }
@@ -1996,11 +1998,12 @@ async function addTask(){
   const unitOtherNote=unit==='other'?(document.getElementById('newUnitOtherNote').value.trim()||''):'';
   const mat=document.getElementById('newMaterial').value;
   const dept=document.getElementById('newDept').value||'';
+  const client=document.getElementById('newClient').value.trim()||'';
   const t={id:nextId++,num:nextNum++,name,nameMain,nameSub,dept,material:mat,priority:Number(document.getElementById('newPriority').value),
     total:Number(document.getElementById('newTotal').value)||0,done:0,
     deadline:document.getElementById('newDeadline').value||null,
     start:document.getElementById('newStart').value||null,
-    unitType:unit,unitOtherNote,unitあり:unit!=='none',workers:w?[w]:[],complete:false,dailyLog:[],transportLog:[]};
+    unitType:unit,unitOtherNote,unitあり:unit!=='none',workers:w?[w]:[],complete:false,client,dailyLog:[],transportLog:[]};
   tasks.push(t);
 
   // ユニットありなら未出荷として仮計上
@@ -2019,7 +2022,7 @@ async function addTask(){
     }
   }
 
-  ['newNameMain','newNameSub','newTotal','newDeadline','newStart','newUnitOtherNote','newSaleKg','newSaleAmount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['newNameMain','newNameSub','newTotal','newDeadline','newStart','newClient','newUnitOtherNote','newSaleKg','newSaleAmount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('newDept').value='';;
   document.getElementById('newUnitType').value='none';
   document.querySelectorAll('#newUnitTabs .unit-tab').forEach(el=>el.classList.remove('active'));
