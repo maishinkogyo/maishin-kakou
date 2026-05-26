@@ -103,7 +103,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
         <button class="nav-btn" onclick="switchMasterTab('materials')" id="nav-materials"><span>🔩</span> 材料</button>
         <button class="nav-btn" onclick="switchMasterTab('vehicles')" id="nav-vehicles"><span>🚗</span> 車両</button>
         <button class="nav-btn" onclick="switchMasterTab('accessories')" id="nav-accessories"><span>📦</span> 付属品</button>
-        <button class="nav-btn" onclick="switchMasterTab('buyers')" id="nav-buyers"><span>🏢</span> 販売先</button>
+        <button class="nav-btn" onclick="switchMasterTab('buyers')" id="nav-buyers"><span>🏢</span> ユニット販売先</button>
         <div style="border-top:1px solid var(--border);margin:8px 4px"></div>
         <a href="kakou.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted);font-weight:700"><span>⚙️</span> 加工管理</a>
         <a href="genba.html" class="nav-btn" style="text-decoration:none;color:var(--text-muted);font-weight:700"><span>🏗️</span> 現場管理</a>
@@ -156,7 +156,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <!-- Buyers Master -->
       <div class="master-panel" id="master-buyers">
         <div class="toolbar">
-          <h2 style="font-size:16px;font-weight:700;margin:0">🏢 販売先マスタ</h2>
+          <h2 style="font-size:16px;font-weight:700;margin:0">🏢 ユニット販売先マスタ</h2>
           <button class="btn btn-primary btn-sm" onclick="openBuyerModal()">＋ 追加</button>
         </div>
         <div id="buyerList" class="card"></div>
@@ -243,10 +243,10 @@ input,select,textarea{font-family:inherit;font-size:14px;}
 <!-- Buyer Modal -->
 <div class="modal-overlay" id="buyerModal">
   <div class="modal">
-    <div class="modal-title" id="buyerModalTitle">販売先追加</div>
+    <div class="modal-title" id="buyerModalTitle">ユニット販売先追加</div>
     <input type="hidden" id="buyerId">
     <div class="form-row">
-      <div class="form-group"><label>販売先名</label><input type="text" id="buyerName" placeholder="例：〇〇建設"></div>
+      <div class="form-group"><label>ユニット販売先名</label><input type="text" id="buyerName" placeholder="例：〇〇建設"></div>
       <div class="form-group"><label>単価（¥/kg）</label><input type="number" id="buyerPrice" min="0" placeholder="0"></div>
     </div>
     <div class="modal-footer">
@@ -498,15 +498,15 @@ function deleteAccessory(id){
 // BUYERS
 function renderBuyers(){
   const list=document.getElementById('buyerList');
-  if(!buyers.length){list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div>販売先が登録されていません</div>';return;}
-  list.innerHTML='<table class="data-table"><thead><tr><th>販売先名</th><th>単価</th><th>操作</th></tr></thead><tbody>'+buyers.map(b=>`<tr><td>${b.name}</td><td>¥${b.unit_price.toLocaleString()}/kg</td><td><button class="btn btn-secondary btn-sm" onclick="editBuyer(${b.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteBuyer(${b.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+  if(!buyers.length){list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div>ユニット販売先が登録されていません</div>';return;}
+  list.innerHTML='<table class="data-table"><thead><tr><th>ユニット販売先名</th><th>単価</th><th>操作</th></tr></thead><tbody>'+buyers.map(b=>`<tr><td>${b.name}</td><td>¥${b.unit_price.toLocaleString()}/kg</td><td><button class="btn btn-secondary btn-sm" onclick="editBuyer(${b.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteBuyer(${b.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
 }
 function openBuyerModal(id=null){
   const b=id?buyers.find(x=>x.id===id):null;
   document.getElementById('buyerId').value=id||'';
   document.getElementById('buyerName').value=b?b.name:'';
   document.getElementById('buyerPrice').value=b?b.unit_price:0;
-  document.getElementById('buyerModalTitle').textContent=id?'販売先編集':'販売先追加';
+  document.getElementById('buyerModalTitle').textContent=id?'ユニット販売先編集':'ユニット販売先追加';
   openModal('buyerModal');
 }
 function saveBuyer(){
