@@ -2004,6 +2004,7 @@ async function addTask(){
     total:Number(document.getElementById('newTotal').value)||0,done:0,
     deadline:document.getElementById('newDeadline').value||null,
     start:document.getElementById('newStart').value||null,
+    status:'未着手',
     unitType:unit,unitOtherNote,unitあり:unit!=='none',workers:w?[w]:[],complete:false,client,dailyLog:[],transportLog:[]};
   tasks.push(t);
 
