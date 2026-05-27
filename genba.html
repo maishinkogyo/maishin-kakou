@@ -181,6 +181,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <div class="toolbar">
             <select id="siteFilter" onchange="renderSites()" class="btn btn-secondary" style="font-weight:500">
               <option value="active">進行中</option>
+              <option value="not-started">未着手</option>
               <option value="all">すべて</option>
               <option value="complete">完了済</option>
             </select>
@@ -195,6 +196,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
           <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
             <select id="ganttFilter" onchange="renderGantt()" class="btn btn-secondary" style="font-weight:500">
               <option value="active">進行中</option>
+              <option value="not-started">未着手</option>
               <option value="all">すべて</option>
               <option value="complete">完了済</option>
             </select>
@@ -699,6 +701,7 @@ function renderSites(){
   const filter=document.getElementById('siteFilter').value;
   let list=tasks;
   if(filter==='active')list=tasks.filter(t=>!t.complete);
+  if(filter==='not-started')list=tasks.filter(t=>!t.complete&&(t.status==='未着手'||!t.status));
   if(filter==='complete')list=tasks.filter(t=>t.complete);
   // 加工アプリと同じ並び順：優先度→納期
   list=[...list].sort((a,b)=>{
@@ -1988,6 +1991,7 @@ function renderGantt(){
   const filter=document.getElementById('ganttFilter').value;
   let list=tasks;
   if(filter==='active')list=tasks.filter(t=>!t.complete);
+  if(filter==='not-started')list=tasks.filter(t=>!t.complete&&(t.status==='未着手'||!t.status));
   if(filter==='complete')list=tasks.filter(t=>t.complete);
 
   const todayStr2=todayStr();
