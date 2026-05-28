@@ -173,6 +173,16 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     <div class="form-row">
       <div class="form-group"><label>氏名</label><input type="text" id="workerName" placeholder="山田 太郎"></div>
     </div>
+    <div class="form-row">
+      <div style="display:flex;gap:16px;align-items:center;flex:1">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0"><input type="checkbox" id="workerIsKakou">加工</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0"><input type="checkbox" id="workerIsGenba">現場</label>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>時給（円）</label><input type="number" id="workerHourlyWage" placeholder="0" min="0"></div>
+      <div class="form-group"><label>入社日</label><input type="date" id="workerHireDate"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('workerModal')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveWorker()">保存</button>
@@ -280,7 +290,7 @@ async function initApp(){
       sb.from('accessories').select('*'),
       sb.from('buyers').select('*')
     ]);
-    workers=(w.data||[]).map(r=>({id:r.id,name:r.name}));
+    workers=(w.data||[]).map(r=>({id:r.id,name:r.name,is_kakou:r.is_kakou||false,is_genba:r.is_genba||false,hourly_wage:r.hourly_wage||0,hire_date:r.hire_date||''}));
     materials=(m.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
     vehicles=(v.data||[]).map(r=>({id:r.id,name:r.name,type:r.type||'',plate:r.plate||'',inspection:r.inspection||'',inspection_place:r.inspection_place||'',note:r.note||''}));
     accessories=(a.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
@@ -308,25 +318,38 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 function renderWorkers(){
   const list=document.getElementById('workerList');
   if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
-  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>`<tr><td>${w.name}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
+    const placement=(w.is_kakou?'加':'-')+(w.is_genba?'現':'-');
+    const today=new Date(),hireDate=w.hire_date?new Date(w.hire_date):null,yearsOfService=hireDate?Math.floor((today-hireDate)/31536000000):'-';
+    return`<tr><td>${w.name}</td><td>${placement}</td><td>${w.hourly_wage||'-'}</td><td>${w.hire_date||'-'}</td><td>${yearsOfService}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`;
+  }).join('')+'</tbody></table>';
 }
 function openWorkerModal(id=null){
+  const w=id?workers.find(x=>x.id===id):null;
   document.getElementById('workerId').value=id||'';
-  document.getElementById('workerName').value=id?workers.find(w=>w.id===id).name:'';
+  document.getElementById('workerName').value=w?w.name:'';
+  document.getElementById('workerIsKakou').checked=w?w.is_kakou:false;
+  document.getElementById('workerIsGenba').checked=w?w.is_genba:false;
+  document.getElementById('workerHourlyWage').value=w?w.hourly_wage:'';
+  document.getElementById('workerHireDate').value=w?w.hire_date:'';
   document.getElementById('workerModalTitle').textContent=id?'従業員編集':'従業員追加';
   openModal('workerModal');
 }
 function saveWorker(){
   const id=Number(document.getElementById('workerId').value);
   const name=document.getElementById('workerName').value.trim();
+  const is_kakou=document.getElementById('workerIsKakou').checked;
+  const is_genba=document.getElementById('workerIsGenba').checked;
+  const hourly_wage=Number(document.getElementById('workerHourlyWage').value)||0;
+  const hire_date=document.getElementById('workerHireDate').value;
   if(!name){alert('氏名を入力してください');return;}
   if(id){
     const w=workers.find(x=>x.id===id);
-    w.name=name;
-    sb.from('workers_list').update({name}).eq('id',id).catch(e=>console.warn(e));
+    Object.assign(w,{name,is_kakou,is_genba,hourly_wage,hire_date});
+    sb.from('workers_list').update({name,is_kakou,is_genba,hourly_wage,hire_date}).eq('id',id).catch(e=>console.warn(e));
   }else{
-    workers.push({id:nextWorkerId,name});
-    sb.from('workers_list').insert({id:nextWorkerId,name}).catch(e=>console.warn(e));
+    workers.push({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
+    sb.from('workers_list').insert({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date}).catch(e=>console.warn(e));
     nextWorkerId++;
   }
   closeModal('workerModal');
