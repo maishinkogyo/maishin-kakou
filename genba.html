@@ -540,6 +540,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let tasks=[],fieldWorkers=[],assignments=[],workRecords=[],costs=[];
+let workersList=[];
 let editingCostId=null,editingWrkId=null;
 
 // ── Storage ──
@@ -606,7 +607,7 @@ async function initApp(){
         sb.from('vehicles').select('*'),
         sb.from('workers_list').select('*'),
       ]);
-      const workersList=wl.data||[];
+      workersList=wl.data||[];
       fieldWorkers=(fw.data||[]).filter(fw=>{
         const w=workersList.find(wl=>wl.name===fw.name);
         return !w||w.is_genba;
@@ -2130,9 +2131,13 @@ function renderGantt(){
 // ── 作業員 ──
 function renderWorkers(){
   const el=document.getElementById('workerList');
-  if(!fieldWorkers.length){el.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">👷</div>作業員が登録されていません</div>';return;}
+  const displayWorkers=fieldWorkers.filter(fw=>{
+    const w=workersList.find(wl=>wl.name===fw.name);
+    return !w||w.is_genba;
+  });
+  if(!displayWorkers.length){el.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">👷</div>作業員が登録されていません</div>';return;}
   el.innerHTML=`<table class="data-table"><thead><tr><th>氏名</th><th>職種</th><th>日当</th><th>メモ</th><th></th></tr></thead><tbody>`+
-    fieldWorkers.map(w=>`<tr>
+    displayWorkers.map(w=>`<tr>
       <td style="font-weight:700">${w.name}</td>
       <td>${w.role||'－'}</td>
       <td>${w.daily_rate?fmtMoney(w.daily_rate):'－'}</td>
