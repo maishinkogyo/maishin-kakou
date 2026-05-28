@@ -335,7 +335,7 @@ function openWorkerModal(id=null){
   document.getElementById('workerModalTitle').textContent=id?'従業員編集':'従業員追加';
   openModal('workerModal');
 }
-function saveWorker(){
+async function saveWorker(){
   const id=Number(document.getElementById('workerId').value);
   const name=document.getElementById('workerName').value.trim();
   const is_kakou=document.getElementById('workerIsKakou').checked;
@@ -343,18 +343,25 @@ function saveWorker(){
   const hourly_wage=Number(document.getElementById('workerHourlyWage').value)||0;
   const hire_date=document.getElementById('workerHireDate').value;
   if(!name){alert('氏名を入力してください');return;}
-  if(id){
-    const w=workers.find(x=>x.id===id);
-    Object.assign(w,{name,is_kakou,is_genba,hourly_wage,hire_date});
-    sb.from('workers_list').update({name,is_kakou,is_genba,hourly_wage,hire_date}).eq('id',id).catch(e=>console.warn(e));
-  }else{
-    workers.push({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
-    sb.from('workers_list').insert({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date}).catch(e=>console.warn(e));
-    nextWorkerId++;
+  try{
+    if(id){
+      const{error}=await sb.from('workers_list').update({name,is_kakou,is_genba,hourly_wage,hire_date}).eq('id',id);
+      if(error)throw error;
+      const w=workers.find(x=>x.id===id);
+      Object.assign(w,{name,is_kakou,is_genba,hourly_wage,hire_date});
+    }else{
+      const{error}=await sb.from('workers_list').insert({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
+      if(error)throw error;
+      workers.push({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
+      nextWorkerId++;
+    }
+    closeModal('workerModal');
+    flash();
+    renderWorkers();
+  }catch(e){
+    console.error('保存失敗:',e);
+    alert('保存に失敗しました:\n'+e.message);
   }
-  closeModal('workerModal');
-  flash();
-  renderWorkers();
 }
 function editWorker(id){openWorkerModal(id);}
 async function deleteWorker(id){
@@ -385,23 +392,30 @@ function openMaterialModal(id=null){
   document.getElementById('materialModalTitle').textContent=id?'材料編集':'材料追加';
   openModal('materialModal');
 }
-function saveMaterial(){
+async function saveMaterial(){
   const id=Number(document.getElementById('materialId').value);
   const name=document.getElementById('materialName').value.trim();
   const note=document.getElementById('materialNote').value.trim();
   if(!name){alert('材料名を入力してください');return;}
-  if(id){
-    const m=materials.find(x=>x.id===id);
-    m.name=name;m.note=note;
-    sb.from('materials').update({name,note}).eq('id',id).catch(e=>console.warn(e));
-  }else{
-    materials.push({id:nextMatId,name,note});
-    sb.from('materials').insert({id:nextMatId,name,note}).catch(e=>console.warn(e));
-    nextMatId++;
+  try{
+    if(id){
+      const{error}=await sb.from('materials').update({name,note}).eq('id',id);
+      if(error)throw error;
+      const m=materials.find(x=>x.id===id);
+      m.name=name;m.note=note;
+    }else{
+      const{error}=await sb.from('materials').insert({id:nextMatId,name,note});
+      if(error)throw error;
+      materials.push({id:nextMatId,name,note});
+      nextMatId++;
+    }
+    closeModal('materialModal');
+    flash();
+    renderMaterials();
+  }catch(e){
+    console.error('保存失敗:',e);
+    alert('保存に失敗しました:\n'+e.message);
   }
-  closeModal('materialModal');
-  flash();
-  renderMaterials();
 }
 function editMaterial(id){openMaterialModal(id);}
 async function deleteMaterial(id){
@@ -436,7 +450,7 @@ function openVehicleModal(id=null){
   document.getElementById('vehicleModalTitle').textContent=id?'車両編集':'車両追加';
   openModal('vehicleModal');
 }
-function saveVehicle(){
+async function saveVehicle(){
   const id=Number(document.getElementById('vehicleId').value);
   const name=document.getElementById('vehicleName').value.trim();
   const type=document.getElementById('vehicleType').value;
@@ -445,18 +459,25 @@ function saveVehicle(){
   const inspection=document.getElementById('vehicleInspection').value;
   const inspection_place=document.getElementById('vehicleInspectionPlace').value.trim();
   if(!name){alert('車両名を入力してください');return;}
-  if(id){
-    const v=vehicles.find(x=>x.id===id);
-    Object.assign(v,{name,type,plate,note,inspection,inspection_place});
-    sb.from('vehicles').update({name,type,plate,note,inspection,inspection_place}).eq('id',id).catch(e=>console.warn(e));
-  }else{
-    vehicles.push({id:nextVehId,name,type,plate,note,inspection,inspection_place});
-    sb.from('vehicles').insert({id:nextVehId,name,type,plate,note,inspection,inspection_place}).catch(e=>console.warn(e));
-    nextVehId++;
+  try{
+    if(id){
+      const{error}=await sb.from('vehicles').update({name,type,plate,note,inspection,inspection_place}).eq('id',id);
+      if(error)throw error;
+      const v=vehicles.find(x=>x.id===id);
+      Object.assign(v,{name,type,plate,note,inspection,inspection_place});
+    }else{
+      const{error}=await sb.from('vehicles').insert({id:nextVehId,name,type,plate,note,inspection,inspection_place});
+      if(error)throw error;
+      vehicles.push({id:nextVehId,name,type,plate,note,inspection,inspection_place});
+      nextVehId++;
+    }
+    closeModal('vehicleModal');
+    flash();
+    renderVehicles();
+  }catch(e){
+    console.error('保存失敗:',e);
+    alert('保存に失敗しました:\n'+e.message);
   }
-  closeModal('vehicleModal');
-  flash();
-  renderVehicles();
 }
 function editVehicle(id){openVehicleModal(id);}
 async function deleteVehicle(id){
@@ -509,23 +530,30 @@ function removeAccessorySpec(i){
   currentAccessorySpecs.splice(i,1);
   renderAccessorySpecs();
 }
-function saveAccessory(){
+async function saveAccessory(){
   const id=Number(document.getElementById('accessoryId').value);
   const name=document.getElementById('accessoryName').value.trim();
   const note=JSON.stringify(currentAccessorySpecs);
   if(!name){alert('付属品名を入力してください');return;}
-  if(id){
-    const a=accessories.find(x=>x.id===id);
-    a.name=name;a.note=note;
-    sb.from('accessories').update({name,note}).eq('id',id).catch(e=>console.warn(e));
-  }else{
-    accessories.push({id:nextAccId,name,note});
-    sb.from('accessories').insert({id:nextAccId,name,note}).catch(e=>console.warn(e));
-    nextAccId++;
+  try{
+    if(id){
+      const{error}=await sb.from('accessories').update({name,note}).eq('id',id);
+      if(error)throw error;
+      const a=accessories.find(x=>x.id===id);
+      a.name=name;a.note=note;
+    }else{
+      const{error}=await sb.from('accessories').insert({id:nextAccId,name,note});
+      if(error)throw error;
+      accessories.push({id:nextAccId,name,note});
+      nextAccId++;
+    }
+    closeModal('accessoryModal');
+    flash();
+    renderAccessories();
+  }catch(e){
+    console.error('保存失敗:',e);
+    alert('保存に失敗しました:\n'+e.message);
   }
-  closeModal('accessoryModal');
-  flash();
-  renderAccessories();
 }
 function editAccessory(id){openAccessoryModal(id);}
 async function deleteAccessory(id){
@@ -556,23 +584,30 @@ function openBuyerModal(id=null){
   document.getElementById('buyerModalTitle').textContent=id?'ユニット販売先編集':'ユニット販売先追加';
   openModal('buyerModal');
 }
-function saveBuyer(){
+async function saveBuyer(){
   const id=Number(document.getElementById('buyerId').value);
   const name=document.getElementById('buyerName').value.trim();
   const unit_price=Number(document.getElementById('buyerPrice').value)||0;
   if(!name){alert('販売先名を入力してください');return;}
-  if(id){
-    const b=buyers.find(x=>x.id===id);
-    b.name=name;b.unit_price=unit_price;
-    sb.from('buyers').update({name,unit_price}).eq('id',id).catch(e=>console.warn(e));
-  }else{
-    buyers.push({id:nextBuyerId,name,unit_price});
-    sb.from('buyers').insert({id:nextBuyerId,name,unit_price}).catch(e=>console.warn(e));
-    nextBuyerId++;
+  try{
+    if(id){
+      const{error}=await sb.from('buyers').update({name,unit_price}).eq('id',id);
+      if(error)throw error;
+      const b=buyers.find(x=>x.id===id);
+      b.name=name;b.unit_price=unit_price;
+    }else{
+      const{error}=await sb.from('buyers').insert({id:nextBuyerId,name,unit_price});
+      if(error)throw error;
+      buyers.push({id:nextBuyerId,name,unit_price});
+      nextBuyerId++;
+    }
+    closeModal('buyerModal');
+    flash();
+    renderBuyers();
+  }catch(e){
+    console.error('保存失敗:',e);
+    alert('保存に失敗しました:\n'+e.message);
   }
-  closeModal('buyerModal');
-  flash();
-  renderBuyers();
 }
 function editBuyer(id){openBuyerModal(id);}
 async function deleteBuyer(id){
