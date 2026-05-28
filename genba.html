@@ -2128,10 +2128,14 @@ function renderGantt(){
 // ── 作業員 ──
 function renderWorkers(){
   const el=document.getElementById('workerList');
+  console.log('fieldWorkers:', fieldWorkers);
+  console.log('workersList:', workersList);
   const displayWorkers=fieldWorkers.filter(fw=>{
     const w=workersList.find(wl=>wl.name===fw.name);
+    console.log(`${fw.name}: found in workers_list=${!!w}, is_genba=${w?.is_genba}`);
     return !w||w.is_genba;
   });
+  console.log('displayWorkers:', displayWorkers);
   if(!displayWorkers.length){el.innerHTML='<div class="empty" style="padding:20px"><div class="empty-icon">👷</div>作業員が登録されていません</div>';return;}
   el.innerHTML=`<table class="data-table"><thead><tr><th>氏名</th><th>職種</th><th>日当</th><th>メモ</th><th></th></tr></thead><tbody>`+
     displayWorkers.map(w=>`<tr>
