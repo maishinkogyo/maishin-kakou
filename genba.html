@@ -2128,6 +2128,7 @@ function renderGantt(){
 // ── 作業員 ──
 function renderWorkers(){
   const el=document.getElementById('workerList');
+  if(!el)return;
   console.log('fieldWorkers:', fieldWorkers);
   console.log('workersList:', workersList);
   const displayWorkers=fieldWorkers.filter(fw=>{
