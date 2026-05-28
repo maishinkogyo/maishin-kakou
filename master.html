@@ -326,7 +326,8 @@ function renderWorkers(){
   const list=document.getElementById('workerList');
   if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
   list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
-    const placement=(w.is_kakou?'加':'-')+(w.is_genba?'現':'-');
+    const parts=[];if(w.is_kakou)parts.push('加');if(w.is_genba)parts.push('現');
+    const placement=parts.length?parts.join('/'):'-';
     const yearsOfService=calculateYearsMonths(w.hire_date);
     return`<tr><td>${w.name}</td><td>${placement}</td><td>${w.hourly_wage||'-'}</td><td>${w.hire_date||'-'}</td><td>${yearsOfService}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`;
   }).join('')+'</tbody></table>';
