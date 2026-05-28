@@ -608,10 +608,14 @@ async function initApp(){
         sb.from('workers_list').select('*'),
       ]);
       workersList=wl.data||[];
+      console.log('workersList from DB:', workersList);
+      console.log('field_workers from DB before filter:', fw.data);
       fieldWorkers=(fw.data||[]).filter(fw=>{
         const w=workersList.find(wl=>wl.name===fw.name);
+        console.log(`${fw.name}: in workers_list=${!!w}, is_genba=${w?.is_genba}, will show=${!w||w.is_genba}`);
         return !w||w.is_genba;
       });
+      console.log('fieldWorkers after filter:', fieldWorkers);
       assignments=asg.data||[];
       workRecords=wr.data||[];
       costs=c.data||[];
