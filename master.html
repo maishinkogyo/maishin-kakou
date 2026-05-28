@@ -315,12 +315,19 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 // WORKERS
+function calculateYearsMonths(hireDate){
+  if(!hireDate)return'-';
+  const today=new Date(),hire=new Date(hireDate);
+  let years=today.getFullYear()-hire.getFullYear(),months=today.getMonth()-hire.getMonth();
+  if(months<0){years--;months+=12;}
+  return`${years}年${months}ヶ月`;
+}
 function renderWorkers(){
   const list=document.getElementById('workerList');
   if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
   list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
     const placement=(w.is_kakou?'加':'-')+(w.is_genba?'現':'-');
-    const today=new Date(),hireDate=w.hire_date?new Date(w.hire_date):null,yearsOfService=hireDate?Math.floor((today-hireDate)/31536000000):'-';
+    const yearsOfService=calculateYearsMonths(w.hire_date);
     return`<tr><td>${w.name}</td><td>${placement}</td><td>${w.hourly_wage||'-'}</td><td>${w.hire_date||'-'}</td><td>${yearsOfService}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`;
   }).join('')+'</tbody></table>';
 }
