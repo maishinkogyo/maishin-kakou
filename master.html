@@ -334,12 +334,17 @@ function saveWorker(){
   renderWorkers();
 }
 function editWorker(id){openWorkerModal(id);}
-function deleteWorker(id){
+async function deleteWorker(id){
   if(!confirm('削除しますか？'))return;
-  workers=workers.filter(w=>w.id!==id);
-  sb.from('workers_list').delete().eq('id',id).catch(e=>console.warn(e));
-  flash();
-  renderWorkers();
+  try{
+    await sb.from('workers_list').delete().eq('id',id);
+    workers=workers.filter(w=>w.id!==id);
+    flash();
+    renderWorkers();
+  }catch(e){
+    console.error('削除失敗:',e);
+    alert('削除に失敗しました');
+  }
 }
 
 // MATERIALS
@@ -375,12 +380,17 @@ function saveMaterial(){
   renderMaterials();
 }
 function editMaterial(id){openMaterialModal(id);}
-function deleteMaterial(id){
+async function deleteMaterial(id){
   if(!confirm('削除しますか？'))return;
-  materials=materials.filter(m=>m.id!==id);
-  sb.from('materials').delete().eq('id',id).catch(e=>console.warn(e));
-  flash();
-  renderMaterials();
+  try{
+    await sb.from('materials').delete().eq('id',id);
+    materials=materials.filter(m=>m.id!==id);
+    flash();
+    renderMaterials();
+  }catch(e){
+    console.error('削除失敗:',e);
+    alert('削除に失敗しました');
+  }
 }
 
 // VEHICLES
@@ -424,12 +434,17 @@ function saveVehicle(){
   renderVehicles();
 }
 function editVehicle(id){openVehicleModal(id);}
-function deleteVehicle(id){
+async function deleteVehicle(id){
   if(!confirm('削除しますか？'))return;
-  vehicles=vehicles.filter(v=>v.id!==id);
-  sb.from('vehicles').delete().eq('id',id).catch(e=>console.warn(e));
-  flash();
-  renderVehicles();
+  try{
+    await sb.from('vehicles').delete().eq('id',id);
+    vehicles=vehicles.filter(v=>v.id!==id);
+    flash();
+    renderVehicles();
+  }catch(e){
+    console.error('削除失敗:',e);
+    alert('削除に失敗しました');
+  }
 }
 
 // ACCESSORIES
@@ -487,12 +502,17 @@ function saveAccessory(){
   renderAccessories();
 }
 function editAccessory(id){openAccessoryModal(id);}
-function deleteAccessory(id){
+async function deleteAccessory(id){
   if(!confirm('削除しますか？'))return;
-  accessories=accessories.filter(a=>a.id!==id);
-  sb.from('accessories').delete().eq('id',id).catch(e=>console.warn(e));
-  flash();
-  renderAccessories();
+  try{
+    await sb.from('accessories').delete().eq('id',id);
+    accessories=accessories.filter(a=>a.id!==id);
+    flash();
+    renderAccessories();
+  }catch(e){
+    console.error('削除失敗:',e);
+    alert('削除に失敗しました');
+  }
 }
 
 // BUYERS
@@ -528,12 +548,17 @@ function saveBuyer(){
   renderBuyers();
 }
 function editBuyer(id){openBuyerModal(id);}
-function deleteBuyer(id){
+async function deleteBuyer(id){
   if(!confirm('削除しますか？'))return;
-  buyers=buyers.filter(b=>b.id!==id);
-  sb.from('buyers').delete().eq('id',id).catch(e=>console.warn(e));
-  flash();
-  renderBuyers();
+  try{
+    await sb.from('buyers').delete().eq('id',id);
+    buyers=buyers.filter(b=>b.id!==id);
+    flash();
+    renderBuyers();
+  }catch(e){
+    console.error('削除失敗:',e);
+    alert('削除に失敗しました');
+  }
 }
 
 // UTILS
