@@ -181,7 +181,7 @@ input,select,textarea{font-family:inherit;font-size:14px;}
     </div>
     <div class="form-row">
       <div class="form-group"><label>時給（円）</label><input type="number" id="workerHourlyWage" placeholder="0" min="0"></div>
-      <div class="form-group"><label>入社日</label><input type="date" id="workerHireDate"></div>
+      <div class="form-group"><label>入社日</label><input type="text" id="workerHireDate" placeholder="20191112 or 2019-11-12" onchange="formatHireDate()"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('workerModal')">キャンセル</button>
@@ -309,6 +309,16 @@ function switchMasterTab(tab){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('master-'+tab).classList.add('active');
   document.getElementById('nav-'+tab).classList.add('active');
+}
+
+function formatHireDate(){
+  const input=document.getElementById('workerHireDate').value.trim();
+  if(!input)return;
+  let formatted=input;
+  if(/^\d{8}$/.test(input)){
+    formatted=input.slice(0,4)+'-'+input.slice(4,6)+'-'+input.slice(6,8);
+  }
+  document.getElementById('workerHireDate').value=formatted;
 }
 
 function openModal(id){document.getElementById(id).classList.add('open');}
