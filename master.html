@@ -387,7 +387,7 @@ function deleteMaterial(id){
 function renderVehicles(){
   const list=document.getElementById('vehicleList');
   if(!vehicles.length){list.innerHTML='<div class="empty"><div class="empty-icon">🚗</div>車両が登録されていません</div>';return;}
-  list.innerHTML='<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>車検日</th><th>操作</th></tr></thead><tbody>'+vehicles.map(v=>`<tr><td>${v.name}</td><td>${v.type||'-'}</td><td>${v.plate||'-'}</td><td>${v.inspection?v.inspection.replace(/-/g,'/'):'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="editVehicle(${v.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteVehicle(${v.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
+  list.innerHTML='<table class="data-table"><thead><tr><th>車両名</th><th>種別</th><th>ナンバー</th><th>車検日</th><th>車検先</th><th>操作</th></tr></thead><tbody>'+vehicles.map(v=>`<tr><td>${v.name}</td><td>${v.type||'-'}</td><td>${v.plate||'-'}</td><td>${v.inspection?v.inspection.replace(/-/g,'/'):'-'}</td><td>${v.inspection_place||'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="editVehicle(${v.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteVehicle(${v.id})">削除</button></td></tr>`).join('')+'</tbody></table>';
 }
 function openVehicleModal(id=null){
   const v=id?vehicles.find(x=>x.id===id):null;
