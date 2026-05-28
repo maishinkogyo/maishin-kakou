@@ -608,10 +608,7 @@ async function initApp(){
         sb.from('workers_list').select('*'),
       ]);
       workersList=wl.data||[];
-      fieldWorkers=(fw.data||[]).filter(fw=>{
-        const w=workersList.find(wl=>wl.name===fw.name);
-        return !w||w.is_genba;
-      });
+      fieldWorkers=fw.data||[];
       assignments=asg.data||[];
       workRecords=wr.data||[];
       costs=c.data||[];
