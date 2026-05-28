@@ -2804,7 +2804,7 @@ async function loadData(){
     ]);
     if(e1) throw e1; if(e2) throw e2; if(e3) throw e3;
     tasks   = dbTasks.map(dbToTask);
-    workers = dbWorkers.map(r=>r.name);
+    workers = dbWorkers.filter(r=>r.is_kakou).map(r=>r.name);
     // ローカルキャッシュを先に読み込んでおき、DB成功分で上書きする（部分失敗でキャッシュを消さない）
     let _cache = {};
     try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw) _cache=JSON.parse(raw); }catch{}

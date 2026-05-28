@@ -598,14 +598,19 @@ async function initApp(){
 
     // 他のデータは Supabase から（オプション）
     try{
-      const[fw,asg,wr,c,veh]=await Promise.all([
+      const[fw,asg,wr,c,veh,wl]=await Promise.all([
         sb.from('field_workers').select('*').order('name'),
         sb.from('field_assignments').select('*'),
         sb.from('field_work_records').select('*').order('date',{ascending:false}),
         sb.from('field_costs').select('*').order('date',{ascending:false}),
         sb.from('vehicles').select('*'),
+        sb.from('workers_list').select('*'),
       ]);
-      fieldWorkers=fw.data||[];
+      const workersList=wl.data||[];
+      fieldWorkers=(fw.data||[]).filter(fw=>{
+        const w=workersList.find(wl=>wl.name===fw.name);
+        return !w||w.is_genba;
+      });
       assignments=asg.data||[];
       workRecords=wr.data||[];
       costs=c.data||[];
