@@ -474,7 +474,7 @@ async function saveVehicle(){
   const type=document.getElementById('vehicleType').value;
   const plate=document.getElementById('vehiclePlate').value.trim();
   const note=document.getElementById('vehicleNote').value.trim();
-  const inspection=document.getElementById('vehicleInspection').value;
+  const inspection=document.getElementById('vehicleInspection').value||null;
   const inspection_place=document.getElementById('vehicleInspectionPlace').value.trim();
   if(!name){alert('車両名を入力してください');return;}
   try{
