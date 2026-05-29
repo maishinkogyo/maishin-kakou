@@ -184,7 +184,11 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>入社日</label><input type="text" id="workerHireDate" placeholder="20191112 or 2019-11-12" onchange="formatHireDate()"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>所属</label><input type="text" id="workerAffiliation" placeholder="例：〇〇部門"></div>
+      <div style="display:flex;gap:16px;align-items:center;flex:1">
+        <label style="margin:0">所属</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0"><input type="radio" name="workerAffiliation" value="加工" id="affiliationKakou">加工</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0"><input type="radio" name="workerAffiliation" value="現場" id="affiliationGenba">現場</label>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('workerModal')">キャンセル</button>
@@ -353,7 +357,11 @@ function openWorkerModal(id=null){
   document.getElementById('workerIsGenba').checked=w?w.is_genba:false;
   document.getElementById('workerHourlyWage').value=w?w.hourly_wage:'';
   document.getElementById('workerHireDate').value=w?w.hire_date:'';
-  document.getElementById('workerAffiliation').value=w?w.affiliation:'';
+  document.querySelectorAll('input[name="workerAffiliation"]').forEach(r=>r.checked=false);
+  if(w&&w.affiliation){
+    const radio=document.querySelector(`input[name="workerAffiliation"][value="${w.affiliation}"]`);
+    if(radio)radio.checked=true;
+  }
   document.getElementById('workerModalTitle').textContent=id?'従業員編集':'従業員追加';
   openModal('workerModal');
 }
@@ -364,7 +372,8 @@ async function saveWorker(){
   const is_genba=document.getElementById('workerIsGenba').checked;
   const hourly_wage=Number(document.getElementById('workerHourlyWage').value)||0;
   const hire_date=document.getElementById('workerHireDate').value;
-  const affiliation=document.getElementById('workerAffiliation').value.trim();
+  const affiliationRadio=document.querySelector('input[name="workerAffiliation"]:checked');
+  const affiliation=affiliationRadio?affiliationRadio.value:'';
   if(!name){alert('氏名を入力してください');return;}
   try{
     if(id){
