@@ -754,7 +754,7 @@ function renderSites(){
         ${t.status==='未着手'&&!t.complete?`<span class="badge amber">⭕ 未着手</span>`:''}
         ${meta.dept?`<span class="badge">${meta.dept}</span>`:''}
         ${meta.priority?`<span class="badge">優先度${meta.priority}</span>`:''}
-        ${meta.material?`<span class="badge blue">${meta.material}</span>`:''}
+        ${t.material?`<span class="badge blue">🔩 ${t.material}</span>`:''}
         ${cost>0?`<span class="badge purple">原価 ${fmtMoney(cost)}</span>`:''}
       </div>
       <!-- kg表示 -->
