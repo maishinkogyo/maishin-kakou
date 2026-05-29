@@ -1155,6 +1155,17 @@ async function saveNippo(){
   const tid=Number(document.getElementById('nippoModal').dataset.tid);
   const date=document.getElementById('nippoDate').value;
   if(!date){alert('日付を入力してください');return;}
+
+  // 作業員の時給をスナップショット保存
+  const workerHourlyWages={};
+  let totalHourlyWage=0;
+  nippoWorkerIds.forEach(wid=>{
+    const w=workersList.find(x=>x.id===wid);
+    const wage=w?Number(w.hourly_wage||0):0;
+    workerHourlyWages[wid]=wage;
+    totalHourlyWage+=wage;
+  });
+
   const extra={
     inputWorker:document.getElementById('nippoInputWorker').value,
     client:document.getElementById('nippoClient').value,
@@ -1167,6 +1178,7 @@ async function saveNippo(){
     other:document.getElementById('nippoOther').value,
     allWorkers:nippoWorkerIds,
     workerStayTypes:nippoStayMap,
+    workerHourlyWages:workerHourlyWages,
     _type:'nippo',
   };
   if(nippoIsOther){
@@ -1183,7 +1195,7 @@ async function saveNippo(){
     closeModal('nippoModal');flash();renderNippo();
     return;
   }
-  const payload={task_id:tid,date,progress:0,content:document.getElementById('nippoContent').value.trim(),note:JSON.stringify(extra)};
+  const payload={task_id:tid,date,progress:0,content:document.getElementById('nippoContent').value.trim(),note:JSON.stringify(extra),hourly_wage:totalHourlyWage};
   if(editingNippoId){
     const{error}=await sb.from('field_work_records').update(payload).eq('id',editingNippoId);
     if(error){alert('エラー: '+error.message);return;}
