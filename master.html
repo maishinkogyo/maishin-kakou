@@ -183,6 +183,9 @@ input,select,textarea{font-family:inherit;font-size:14px;}
       <div class="form-group"><label>時給（円）</label><input type="number" id="workerHourlyWage" placeholder="0" min="0"></div>
       <div class="form-group"><label>入社日</label><input type="text" id="workerHireDate" placeholder="20191112 or 2019-11-12" onchange="formatHireDate()"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>所属</label><input type="text" id="workerAffiliation" placeholder="例：〇〇部門"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('workerModal')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveWorker()">保存</button>
@@ -290,7 +293,7 @@ async function initApp(){
       sb.from('accessories').select('*'),
       sb.from('buyers').select('*')
     ]);
-    workers=(w.data||[]).map(r=>({id:r.id,name:r.name,is_kakou:r.is_kakou||false,is_genba:r.is_genba||false,hourly_wage:r.hourly_wage||0,hire_date:r.hire_date||''}));
+    workers=(w.data||[]).map(r=>({id:r.id,name:r.name,is_kakou:r.is_kakou||false,is_genba:r.is_genba||false,hourly_wage:r.hourly_wage||0,hire_date:r.hire_date||'',affiliation:r.affiliation||''}));
     materials=(m.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
     vehicles=(v.data||[]).map(r=>({id:r.id,name:r.name,type:r.type||'',plate:r.plate||'',inspection:r.inspection||'',inspection_place:r.inspection_place||'',note:r.note||''}));
     accessories=(a.data||[]).map(r=>({id:r.id,name:r.name,note:r.note||''}));
@@ -335,11 +338,11 @@ function calculateYearsMonths(hireDate){
 function renderWorkers(){
   const list=document.getElementById('workerList');
   if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
-  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
+  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>所属</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
     const parts=[];if(w.is_kakou)parts.push('加');if(w.is_genba)parts.push('現');
     const placement=parts.length?parts.join('/'):'-';
     const yearsOfService=calculateYearsMonths(w.hire_date);
-    return`<tr><td>${w.name}</td><td>${placement}</td><td>${w.hourly_wage||'-'}</td><td>${w.hire_date||'-'}</td><td>${yearsOfService}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`;
+    return`<tr><td>${w.name}</td><td>${w.affiliation||'-'}</td><td>${placement}</td><td>${w.hourly_wage||'-'}</td><td>${w.hire_date||'-'}</td><td>${yearsOfService}</td><td><button class="btn btn-secondary btn-sm" onclick="editWorker(${w.id})">編集</button> <button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">削除</button></td></tr>`;
   }).join('')+'</tbody></table>';
 }
 function openWorkerModal(id=null){
@@ -350,6 +353,7 @@ function openWorkerModal(id=null){
   document.getElementById('workerIsGenba').checked=w?w.is_genba:false;
   document.getElementById('workerHourlyWage').value=w?w.hourly_wage:'';
   document.getElementById('workerHireDate').value=w?w.hire_date:'';
+  document.getElementById('workerAffiliation').value=w?w.affiliation:'';
   document.getElementById('workerModalTitle').textContent=id?'従業員編集':'従業員追加';
   openModal('workerModal');
 }
@@ -360,17 +364,18 @@ async function saveWorker(){
   const is_genba=document.getElementById('workerIsGenba').checked;
   const hourly_wage=Number(document.getElementById('workerHourlyWage').value)||0;
   const hire_date=document.getElementById('workerHireDate').value;
+  const affiliation=document.getElementById('workerAffiliation').value.trim();
   if(!name){alert('氏名を入力してください');return;}
   try{
     if(id){
-      const{error}=await sb.from('workers_list').update({name,is_kakou,is_genba,hourly_wage,hire_date}).eq('id',id);
+      const{error}=await sb.from('workers_list').update({name,is_kakou,is_genba,hourly_wage,hire_date,affiliation}).eq('id',id);
       if(error)throw error;
       const w=workers.find(x=>x.id===id);
-      Object.assign(w,{name,is_kakou,is_genba,hourly_wage,hire_date});
+      Object.assign(w,{name,is_kakou,is_genba,hourly_wage,hire_date,affiliation});
     }else{
-      const{error}=await sb.from('workers_list').insert({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
+      const{error}=await sb.from('workers_list').insert({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date,affiliation});
       if(error)throw error;
-      workers.push({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date});
+      workers.push({id:nextWorkerId,name,is_kakou,is_genba,hourly_wage,hire_date,affiliation});
       nextWorkerId++;
     }
     closeModal('workerModal');
