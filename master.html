@@ -342,7 +342,12 @@ function calculateYearsMonths(hireDate){
 function renderWorkers(){
   const list=document.getElementById('workerList');
   if(!workers.length){list.innerHTML='<div class="empty"><div class="empty-icon">👤</div>従業員が登録されていません</div>';return;}
-  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>所属</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+workers.map(w=>{
+  const sortedWorkers=[...workers].sort((a,b)=>{
+    const dateA=new Date(a.hire_date||'9999-12-31');
+    const dateB=new Date(b.hire_date||'9999-12-31');
+    return dateA-dateB;
+  });
+  list.innerHTML='<table class="data-table"><thead><tr><th>氏名</th><th>所属</th><th>配置</th><th>時給</th><th>入社日</th><th>勤続年数</th><th>操作</th></tr></thead><tbody>'+sortedWorkers.map(w=>{
     const parts=[];if(w.is_kakou)parts.push('加');if(w.is_genba)parts.push('現');
     const placement=parts.length?parts.join('/'):'-';
     const yearsOfService=calculateYearsMonths(w.hire_date);
