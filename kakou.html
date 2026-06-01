@@ -2258,10 +2258,10 @@ function renderGantt(){
     ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示する現場がありません</div>'}
   `;
 
-  // スクロール開始位置をグリッド開始位置に設定
+  // スクロール開始位置を0に設定（左側パネルが見える位置から開始）
   const ganttWrap = document.querySelector('.gantt-wrap');
   if(ganttWrap) {
-    ganttWrap.scrollLeft = 220;
+    ganttWrap.scrollLeft = 0;
   }
 
 }
