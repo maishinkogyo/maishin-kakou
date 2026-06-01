@@ -4747,6 +4747,7 @@ async function initApp(){
   await loadData();
   // ガントチャート初期値を今日に設定
   document.getElementById('ganttStart').value=new Date(TODAY).toISOString().slice(0,10);
+  document.getElementById('ganttDays').value='30'; // デフォルト30日間表示
   render();
 }
 initApp();
