@@ -330,12 +330,12 @@ select:focus,input:focus{border-color:var(--accent);}
 
 /* Two-row header */
 .gantt-hrow{display:flex;}
-.gantt-hlabel{width:220px;flex-shrink:0;padding:6px 0;}
+.gantt-hlabel{width:220px;flex-shrink:0;padding:6px 0;position:sticky;left:0;background:var(--surface);z-index:2;}
 .gantt-month-strip{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .gantt-mcell{font-size:12px;font-weight:700;color:var(--text);padding:5px 0;text-align:center;border-left:1px solid var(--border);flex-shrink:0;white-space:nowrap;background:var(--surface2);}
 
 .gantt-hrow2{display:flex;border-bottom:2px solid var(--border);}
-.gantt-hlabel2{width:220px;flex-shrink:0;font-size:10px;color:var(--text-muted);padding:5px 0;text-transform:uppercase;letter-spacing:.06em;}
+.gantt-hlabel2{width:220px;flex-shrink:0;font-size:10px;color:var(--text-muted);padding:5px 0;text-transform:uppercase;letter-spacing:.06em;position:sticky;left:0;background:var(--surface);z-index:2;}
 .gantt-day-strip{display:flex;flex-shrink:0;}
 .gantt-dcell{text-align:center;font-size:12px;font-weight:600;color:var(--text-muted);font-family:'DM Mono',monospace;padding:4px 0 3px;border-left:1px solid rgba(180,185,210,.5);flex-shrink:0;line-height:1;}
 .gantt-dcell .dow{display:block;font-size:9px;font-weight:400;opacity:.65;margin-top:1px;}
@@ -345,10 +345,10 @@ select:focus,input:focus{border-color:var(--accent);}
 
 .gantt-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(160,170,200,.35);}
 .gantt-row:hover{background:rgba(0,0,0,.02);}
-.gantt-row-label{width:220px;flex-shrink:0;padding:6px 8px 6px 0;font-size:12px;display:flex;align-items:center;gap:6px;min-height:52px;}
+.gantt-row-label{width:220px;flex-shrink:0;padding:6px 8px 6px 0;font-size:12px;display:flex;align-items:center;gap:6px;min-height:52px;position:sticky;left:0;background:var(--surface);z-index:2;}
 .gantt-row-label .lname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .gantt-bar-area{flex:1;position:relative;height:52px;}
-.gbg{position:absolute;top:0;bottom:0;border-left:1px solid rgba(160,170,200,.4);z-index:1;}
+.gbg{position:absolute;top:0;bottom:0;border-left:1px solid rgba(160,170,200,.6);z-index:1;}
 .gbg.today-bg{background:rgba(37,99,235,.05);border-left-color:rgba(37,99,235,.35);}
 .gbg.wkend{background:rgba(0,0,0,.025);}
 .gtoday-line{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:10;opacity:.75;pointer-events:none;}
