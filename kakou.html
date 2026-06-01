@@ -2261,10 +2261,8 @@ function renderGantt(){
   // ── Synchronize scroll positions ──
   const hrow = document.querySelector('.gantt-hrow');
   const hrow2 = document.querySelector('.gantt-hrow2');
-  const monthStrip = document.querySelector('.gantt-month-strip');
-  const dayStrip = document.querySelector('.gantt-day-strip');
 
-  if(hrow && hrow2 && monthStrip && dayStrip) {
+  if(hrow && hrow2) {
     hrow.addEventListener('scroll', () => {
       hrow2.scrollLeft = hrow.scrollLeft;
     });
