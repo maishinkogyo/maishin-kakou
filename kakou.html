@@ -4738,8 +4738,6 @@ function showChangePassword(){
 }
 
 // ── Init ──
-const gs=new Date(TODAY);gs.setDate(gs.getDate()-3);
-document.getElementById('ganttStart').value=gs.toISOString().slice(0,10);
 // Load from Supabase after unlock
 async function initApp(){
   // iOSのSafari対策: 少し待ってから接続
