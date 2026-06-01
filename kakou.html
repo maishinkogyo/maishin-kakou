@@ -2147,7 +2147,14 @@ function ganttToday(){
 function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
   let days=Number(document.getElementById('ganttDays').value)||30;
-  if(days<14) days=30; // 最小 30 日
+
+  // 「1ヶ月」の場合、現在の月の実際の日数を使用
+  if(days==30) {
+    const nextMonth=new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0);
+    days=nextMonth.getDate();
+  }
+  // 「2ヶ月」は 60 日のまま
+
   const wf=document.getElementById('ganttWorker').value;
   const startD=sv?toD(sv):new Date(TODAY);
 
