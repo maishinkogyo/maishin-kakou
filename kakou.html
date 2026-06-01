@@ -2146,7 +2146,8 @@ function ganttToday(){
 
 function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
-  let days=30; // 常に 30 日固定
+  let days=Number(document.getElementById('ganttDays').value)||30;
+  if(days<14) days=30; // 最小 30 日
   const wf=document.getElementById('ganttWorker').value;
   const startD=sv?toD(sv):new Date(TODAY);
 
