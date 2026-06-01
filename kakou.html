@@ -326,7 +326,7 @@ select:focus,input:focus{border-color:var(--accent);}
 /* ══ GANTT ══ */
 .gantt-wrap{padding:14px 24px 24px;overflow-x:auto;width:100%;box-sizing:border-box;}
 .gantt-controls{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
-.gantt-container{min-width:600px;}
+.gantt-container{min-width:1200px;}
 
 /* Two-row header */
 .gantt-hrow{display:flex;}
@@ -2093,7 +2093,7 @@ function exportPdf(tab){
   const extraMap={
     gantt:`
       .gantt-controls{display:none!important;}
-      .gantt-wrap,.gantt-container{overflow:visible!important;}
+      .gantt-wrap{overflow-x:auto!important;}.gantt-container{overflow:visible!important;}
       .gc-1{background:rgba(220,38,38,.85)!important;} .gc-2{background:rgba(217,119,6,.85)!important;}
       .gc-3{background:rgba(37,99,235,.8)!important;} .gc-4{background:rgba(100,116,139,.7)!important;}
       .gc-done{background:rgba(22,163,74,.75)!important;} .gbar-txt{color:#fff!important;font-weight:700!important;}
