@@ -2258,14 +2258,6 @@ function renderGantt(){
     ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示する現場がありません</div>'}
   `;
 
-  // スクロール開始位置を左側パネルの幅分に設定
-  const ganttWrap = document.querySelector('.gantt-wrap');
-  if(ganttWrap) {
-    setTimeout(() => {
-      ganttWrap.scrollLeft = 220;
-    }, 0);
-  }
-
 }
 
 // ══ PRODUCTION ══
