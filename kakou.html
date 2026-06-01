@@ -4749,6 +4749,7 @@ async function initApp(){
   document.getElementById('ganttStart').value=new Date(TODAY).toISOString().slice(0,10);
   document.getElementById('ganttDays').value='30'; // デフォルト30日間表示
   render();
+  renderGantt(); // ガントチャートを再度レンダリング（ganttDays設定の反映のため）
 }
 initApp();
 </script>
