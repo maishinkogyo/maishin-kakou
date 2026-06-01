@@ -2146,14 +2146,18 @@ function ganttToday(){
 
 function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
-  let days=Number(document.getElementById('ganttDays').value)||30;
+  const ganttDaysVal=document.getElementById('ganttDays').value;
+  let days=30; // デフォルト
 
-  // 「1ヶ月」の場合、現在の月の実際の日数を使用
-  if(days==30) {
+  if(ganttDaysVal=='60') {
+    days=60; // 2ヶ月
+  } else if(ganttDaysVal=='30') {
+    // 1ヶ月：現在の月の実際の日数
     const nextMonth=new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0);
     days=nextMonth.getDate();
+  } else {
+    days=Number(ganttDaysVal)||30;
   }
-  // 「2ヶ月」は 60 日のまま
 
   const wf=document.getElementById('ganttWorker').value;
   const startD=sv?toD(sv):new Date(TODAY);
