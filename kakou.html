@@ -2147,16 +2147,15 @@ function ganttToday(){
 function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
   const ganttDaysVal=document.getElementById('ganttDays').value;
-  let days=30; // デフォルト
 
+  let days;
   if(ganttDaysVal=='60') {
-    days=60; // 2ヶ月
-  } else if(ganttDaysVal=='30') {
-    // 1ヶ月：現在の月の実際の日数
+    // 2ヶ月：常に60日
+    days=60;
+  } else {
+    // 1ヶ月またはその他：現在の月の実際の日数
     const nextMonth=new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0);
     days=nextMonth.getDate();
-  } else {
-    days=Number(ganttDaysVal)||30;
   }
 
   const wf=document.getElementById('ganttWorker').value;
