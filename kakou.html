@@ -2257,6 +2257,21 @@ function renderGantt(){
     </div>
     ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示する現場がありません</div>'}
   `;
+
+  // ── Synchronize scroll positions ──
+  const hrow = document.querySelector('.gantt-hrow');
+  const hrow2 = document.querySelector('.gantt-hrow2');
+  const monthStrip = document.querySelector('.gantt-month-strip');
+  const dayStrip = document.querySelector('.gantt-day-strip');
+
+  if(hrow && hrow2 && monthStrip && dayStrip) {
+    hrow.addEventListener('scroll', () => {
+      hrow2.scrollLeft = hrow.scrollLeft;
+    });
+    hrow2.addEventListener('scroll', () => {
+      hrow.scrollLeft = hrow2.scrollLeft;
+    });
+  }
 }
 
 // ══ PRODUCTION ══
