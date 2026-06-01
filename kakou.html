@@ -329,14 +329,14 @@ select:focus,input:focus{border-color:var(--accent);}
 .gantt-container{min-width:600px;}
 
 /* Two-row header */
-.gantt-hrow{display:flex;overflow-x:auto;overflow-y:hidden;}
+.gantt-hrow{display:flex;}
 .gantt-hlabel{width:220px;flex-shrink:0;padding:6px 0;}
-.gantt-month-strip{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;overflow-y:hidden;flex-shrink:0;}
+.gantt-month-strip{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .gantt-mcell{font-size:12px;font-weight:700;color:var(--text);padding:5px 0;text-align:center;border-left:1px solid var(--border);flex-shrink:0;white-space:nowrap;background:var(--surface2);}
 
-.gantt-hrow2{display:flex;border-bottom:2px solid var(--border);overflow-x:auto;overflow-y:hidden;}
+.gantt-hrow2{display:flex;border-bottom:2px solid var(--border);}
 .gantt-hlabel2{width:220px;flex-shrink:0;font-size:10px;color:var(--text-muted);padding:5px 0;text-transform:uppercase;letter-spacing:.06em;}
-.gantt-day-strip{display:flex;overflow-x:auto;overflow-y:hidden;flex-shrink:0;}
+.gantt-day-strip{display:flex;flex-shrink:0;}
 .gantt-dcell{text-align:center;font-size:12px;font-weight:600;color:var(--text-muted);font-family:'DM Mono',monospace;padding:4px 0 3px;border-left:1px solid rgba(180,185,210,.5);flex-shrink:0;line-height:1;}
 .gantt-dcell .dow{display:block;font-size:9px;font-weight:400;opacity:.65;margin-top:1px;}
 .gantt-dcell.today-h{color:var(--accent);font-weight:800;background:rgba(58,126,245,.08);}
@@ -2258,18 +2258,6 @@ function renderGantt(){
     ${rows||'<div style="color:var(--text-muted);padding:20px;text-align:center;">表示する現場がありません</div>'}
   `;
 
-  // ── Synchronize scroll positions ──
-  const hrow = document.querySelector('.gantt-hrow');
-  const hrow2 = document.querySelector('.gantt-hrow2');
-
-  if(hrow && hrow2) {
-    hrow.addEventListener('scroll', () => {
-      hrow2.scrollLeft = hrow.scrollLeft;
-    });
-    hrow2.addEventListener('scroll', () => {
-      hrow.scrollLeft = hrow2.scrollLeft;
-    });
-  }
 }
 
 // ══ PRODUCTION ══
