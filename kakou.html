@@ -2147,11 +2147,8 @@ function ganttToday(){
 function renderGantt(){
   const sv=document.getElementById('ganttStart').value;
 
-  // デフォルト：現在の月の実際の日数を取得
-  const nextMonth=new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0);
-  let days=nextMonth.getDate();
-
-  // 「2ヶ月」を選択した場合のみ 60 日に変更
+  // 1ヶ月=30日、2ヶ月=60日
+  let days=30;
   const ganttDaysVal=document.getElementById('ganttDays').value;
   if(ganttDaysVal=='60') {
     days=60;
