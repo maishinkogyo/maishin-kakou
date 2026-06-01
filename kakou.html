@@ -4746,7 +4746,9 @@ async function initApp(){
   await new Promise(r => setTimeout(r, 300));
   await loadData();
   // ガントチャート初期値を今日に設定
-  document.getElementById('ganttStart').value=new Date(TODAY).toISOString().slice(0,10);
+  const ganttStartDate=new Date(TODAY);
+  const ganttDateStr=`${ganttStartDate.getFullYear()}-${String(ganttStartDate.getMonth()+1).padStart(2,'0')}-${String(ganttStartDate.getDate()).padStart(2,'0')}`;
+  document.getElementById('ganttStart').value=ganttDateStr;
   document.getElementById('ganttDays').value='30'; // デフォルト30日間表示
   render();
   renderGantt(); // ガントチャートを再度レンダリング（ganttDays設定の反映のため）
