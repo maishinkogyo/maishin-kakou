@@ -2266,12 +2266,11 @@ function renderGantt(){
 
   // 現場名クリックで編集ページを開く
   document.querySelectorAll('[data-ganba-id]').forEach(rowLabel => {
-    rowLabel.onclick = (e) => {
-      e.stopPropagation();
-      const id = rowLabel.getAttribute('data-ganba-id');
+    rowLabel.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-ganba-id');
       console.log('Gantt row clicked:', id);
-      editGanba(id);
-    };
+      if(id) editGanba(id);
+    }, true); // useCapture: true to catch clicks on child elements
   });
 
 }
