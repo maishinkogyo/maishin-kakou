@@ -2265,12 +2265,17 @@ function renderGantt(){
   }
 
   // 現場名クリックで編集ページを開く
-  document.querySelectorAll('[data-ganba-id]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      const id = el.getAttribute('data-ganba-id');
-      editGanba(id);
+  // 現場名クリックで編集ページを開く
+  const ganttContainer = document.getElementById('ganttContainer');
+  if(ganttContainer) {
+    ganttContainer.addEventListener('click', (e) => {
+      const rowLabel = e.target.closest('[data-ganba-id]');
+      if(rowLabel) {
+        const id = rowLabel.getAttribute('data-ganba-id');
+        editGanba(id);
+      }
     });
-  });
+  }
 
 }
 
@@ -2278,73 +2283,7 @@ function renderGantt(){
 function editGanba(id){
   const task = tasks.find(t => t.id == id);
   if(!task) return;
-
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000';
-
-  const content = document.createElement('div');
-  content.style.cssText = 'background:var(--surface);border-radius:12px;padding:24px;width:90%;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2)';
-
-  content.innerHTML = `
-    <h2 style="margin:0 0 20px;color:var(--text)">${task.name}</h2>
-    <div style="display:grid;gap:15px">
-      <div>
-        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px">No.</label>
-        <input type="text" id="ganba-edit-no" value="${task.num || task.id}" readonly style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);cursor:not-allowed">
-      </div>
-      <div>
-        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px">現場名</label>
-        <input type="text" id="ganba-edit-name" value="${task.name.replace(/"/g,'&quot;')}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-      </div>
-      <div>
-        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px">メモ</label>
-        <textarea id="ganba-edit-memo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);min-height:80px;resize:vertical;font-family:inherit">${(task.memo || '').replace(/"/g,'&quot;')}</textarea>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:10px">
-        <button class="btn btn-primary" onclick="saveGanbaEdit('${id}',this.closest('div').closest('div').parentElement)">保存</button>
-        <button class="btn btn-secondary" onclick="this.closest('div').closest('div').parentElement.parentElement.remove()">キャンセル</button>
-      </div>
-    </div>
-  `;
-
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-  document.getElementById('ganba-edit-name').focus();
-}
-
-async function saveGanbaEdit(id, modalDiv){
-  const newName = document.getElementById('ganba-edit-name').value.trim();
-  const newMemo = document.getElementById('ganba-edit-memo').value.trim();
-
-  if(!newName) {
-    alert('現場名を入力してください');
-    return;
-  }
-
-  const task = tasks.find(t => t.id == id);
-  if(!task) return;
-
-  task.name = newName;
-  task.memo = newMemo;
-
-  try {
-    await sb.from('ganbas').upsert({
-      id: task.id,
-      name: task.name,
-      memo: task.memo || null,
-      num: task.num,
-      status: task.status,
-      deadline: task.deadline
-    });
-    flashSaved();
-  } catch(e) {
-    console.error('現場更新失敗:', e);
-    alert('保存に失敗しました');
-  }
-
-  saveLocal();
-  modalDiv.parentElement.remove();
-  renderGantt();
+  openTaskModal(id);
 }
 
 // ══ PRODUCTION ══
