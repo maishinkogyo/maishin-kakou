@@ -324,7 +324,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .form-group input,.form-group select{width:100%;}
 
 /* ══ GANTT ══ */
-.gantt-wrap{padding:14px 24px 24px;overflow-x:auto;width:100%;box-sizing:border-box;}
+.gantt-wrap{padding:14px 24px 24px 0;overflow-x:auto;width:100%;box-sizing:border-box;}
 .gantt-controls{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
 .gantt-container{min-width:600px;}
 
@@ -351,7 +351,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .gbg{position:absolute;top:0;bottom:0;border-left:1px solid rgba(130,145,180,.8);z-index:1;}
 .gbg.today-bg{background:rgba(37,99,235,.05);border-left-color:rgba(37,99,235,.35);}
 .gbg.wkend{background:rgba(0,0,0,.025);}
-.gtoday-line{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:10;opacity:1;pointer-events:none;}
+.gtoday-line{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:20;opacity:1;pointer-events:none;}
 .gdl-line{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:9;opacity:1;pointer-events:none;}
 .gbar{position:absolute;top:15px;height:22px;border-radius:5px;display:flex;align-items:center;overflow:hidden;cursor:default;}
 .gbar:hover{filter:brightness(1.15);}
