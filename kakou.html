@@ -2267,7 +2267,9 @@ function renderGantt(){
   // 現場名クリックで編集ページを開く
   document.querySelectorAll('[data-ganba-id]').forEach(rowLabel => {
     rowLabel.onclick = (e) => {
+      e.stopPropagation();
       const id = rowLabel.getAttribute('data-ganba-id');
+      console.log('Gantt row clicked:', id);
       editGanba(id);
     };
   });
