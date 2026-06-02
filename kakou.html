@@ -2265,17 +2265,12 @@ function renderGantt(){
   }
 
   // 現場名クリックで編集ページを開く
-  // 現場名クリックで編集ページを開く
-  const ganttContainer = document.getElementById('ganttContainer');
-  if(ganttContainer) {
-    ganttContainer.addEventListener('click', (e) => {
-      const rowLabel = e.target.closest('[data-ganba-id]');
-      if(rowLabel) {
-        const id = rowLabel.getAttribute('data-ganba-id');
-        editGanba(id);
-      }
-    });
-  }
+  document.querySelectorAll('[data-ganba-id]').forEach(rowLabel => {
+    rowLabel.onclick = (e) => {
+      const id = rowLabel.getAttribute('data-ganba-id');
+      editGanba(id);
+    };
+  });
 
 }
 
