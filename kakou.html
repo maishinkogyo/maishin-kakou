@@ -2226,7 +2226,7 @@ function renderGantt(){
 
     return`
     <div class="gantt-row">
-      <div class="gantt-row-label" style="flex-direction:column;align-items:flex-start;gap:3px;padding:5px 8px 5px 0;">
+      <div class="gantt-row-label" data-ganba-id="${t.id}" style="flex-direction:column;align-items:flex-start;gap:3px;padding:5px 8px 5px 0;cursor:pointer;">
         <div style="display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;">
           <span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;flex-shrink:0">No.${t.num??t.id}</span>
           <div class="priority-badge ${priClass(pri)}" style="width:20px;height:20px;font-size:10px;flex-shrink:0">${pri}</div>
@@ -2263,6 +2263,17 @@ function renderGantt(){
   if(ganttWrap) {
     ganttWrap.scrollLeft = 0;
   }
+
+  // 現場名クリックで編集ページを開く
+  document.querySelectorAll('[data-ganba-id]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const id = el.getAttribute('data-ganba-id');
+      const ganba = tasks.find(t => t.id == id);
+      if(ganba) {
+        showGanbaModal(ganba);
+      }
+    });
+  });
 
 }
 
