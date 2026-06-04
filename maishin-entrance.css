@@ -1,0 +1,96 @@
+/**
+ * ログイン・未ログイン案内（白カード + ネイビー枠）
+ * 色トークンは maishin-theme.css
+ */
+body.maishin-auth-pending > *:not(#maishinAuthGate){display:none!important;}
+body.maishin-auth-pending #maishinAuthGate{display:flex!important;}
+
+#lockScreen,
+#maishinAuthGate{
+  position:fixed;inset:0;z-index:10000;
+  background:var(--ms-navy-deep, #0b1220);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif;
+  color:var(--ms-text-on-navy, #f1f5f9);
+}
+#lockScreen{z-index:9999;}
+#maishinAuthGate{display:none;}
+
+.lock-card,
+.maishin-auth-card{
+  position:relative;z-index:1;
+  background:var(--ms-surface, #fff);
+  border:2px solid var(--ms-navy-border, #1e293b);
+  border-radius:16px;
+  padding:32px 28px 28px;
+  width:360px;max-width:100%;
+  box-shadow:0 12px 40px rgba(11,18,32,.25);
+  text-align:center;
+  color:var(--ms-text, #1e293b);
+}
+
+.lock-eyebrow,
+.maishin-auth-eyebrow{
+  font-size:10px;font-weight:700;letter-spacing:.22em;
+  color:var(--ms-text-muted, #64748b);text-transform:uppercase;margin-bottom:10px;
+}
+.lock-divider,
+.maishin-auth-divider{
+  width:44px;height:2px;margin:12px auto 16px;
+  background:var(--ms-navy-border, #1e293b);
+  border-radius:99px;
+}
+.lock-sub{font-size:12px;color:var(--ms-text-muted);margin-bottom:20px;}
+.maishin-auth-card > p:not(.maishin-auth-eyebrow){
+  font-size:14px;color:var(--ms-text-muted);margin-bottom:20px;line-height:1.6;
+}
+
+.lock-input-wrap{position:relative;margin-bottom:8px;text-align:left;}
+.lock-input-wrap input{
+  width:100%;padding:12px 44px 12px 14px;
+  background:var(--ms-surface2, #f1f5f9);
+  border:1.5px solid var(--ms-navy-border, #1e293b);border-radius:10px;
+  font-size:15px;font-family:inherit;color:var(--ms-text);
+  outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.lock-input-wrap input::placeholder{color:#94a3b8;}
+.lock-input-wrap input:focus{
+  border-color:var(--ms-accent, #1e40af);
+  box-shadow:0 0 0 3px rgba(30,64,175,.2);
+}
+.lock-input-wrap input.error{border-color:var(--ms-danger);animation:ent-shake .35s ease;}
+@keyframes ent-shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}
+.eye-btn{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;font-size:18px;cursor:pointer;color:var(--ms-text-muted);
+}
+.eye-btn:hover{color:var(--ms-text);}
+#lockError{color:var(--ms-danger);font-size:12px;min-height:18px;margin-bottom:8px;}
+
+.lock-btn,
+.maishin-auth-card a{
+  display:inline-block;width:100%;box-sizing:border-box;
+  padding:12px;border:none;border-radius:10px;
+  font-size:14px;font-weight:700;font-family:inherit;color:#fff;
+  text-decoration:none;cursor:pointer;text-align:center;
+  background:var(--ms-accent, #1e40af);
+  transition:background .15s,transform .12s;
+}
+.lock-btn:hover,
+.maishin-auth-card a:hover{
+  background:var(--ms-accent-hover, #1e3a8a);
+}
+.lock-btn:active{transform:scale(.98);}
+.lock-change-btn{
+  margin-top:14px;background:none;border:none;color:var(--ms-text-muted);
+  font-size:11px;font-family:inherit;cursor:pointer;text-decoration:underline;
+}
+.lock-change-btn:hover{color:var(--ms-text);}
+#lockHint{font-size:11px;color:var(--ms-text-muted);margin-top:12px;line-height:1.55;}

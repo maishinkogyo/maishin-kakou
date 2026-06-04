@@ -1,0 +1,283 @@
+/**
+ * マイシン工業 — 共通テーマ（ネイビー + 白カード・ネイビー枠）
+ */
+:root{
+  --ms-navy-deep:#0b1220;
+  --ms-navy:#111827;
+  --ms-navy-side:#1e293b;
+  --ms-navy-border:#1e293b;
+  --ms-navy-border-soft:#334155;
+  --ms-bg:#f8fafc;
+  --ms-surface:#ffffff;
+  --ms-surface2:#f1f5f9;
+  --ms-border-light:#cbd5e1;
+  --ms-text:#1e293b;
+  --ms-text-muted:#64748b;
+  --ms-text-on-navy:#f1f5f9;
+  --ms-muted-on-navy:#94a3b8;
+  --ms-accent:#1e40af;
+  --ms-accent-hover:#1e3a8a;
+  --ms-accent-light:#dbeafe;
+  --ms-danger:#dc2626;
+  --ms-warn:#d97706;
+  --ms-ok:#16a34a;
+
+  /* 既存ページ用エイリアス */
+  --bg:var(--ms-bg);
+  --surface:var(--ms-surface);
+  --surface2:var(--ms-surface2);
+  --border:var(--ms-border-light);
+  --text:var(--ms-text);
+  --text-muted:var(--ms-text-muted);
+  --accent:var(--ms-accent);
+  --accent2:var(--ms-accent);
+  --accent-light:var(--ms-accent-light);
+  --danger:var(--ms-danger);
+  --warn:var(--ms-warn);
+  --ok:var(--ms-ok);
+  --progress-bg:#e2e8f0;
+  --ms-sidebar-w:232px;
+  --sidebar-w:var(--ms-sidebar-w);
+  --side-nav-w:var(--ms-sidebar-w);
+
+  --ent-bg:var(--ms-navy-deep);
+  --ent-surface:var(--ms-surface);
+  --ent-surface-hover:#f8fafc;
+  --ent-border:var(--ms-navy-border);
+  --ent-text:var(--ms-text);
+  --ent-muted:var(--ms-text-muted);
+  --ent-accent:var(--ms-accent);
+  --ent-accent2:var(--ms-accent);
+  --ent-danger:var(--ms-danger);
+}
+
+/* ── 統一サイドメニュー（加工・現場・マスタ共通） ── */
+.ms-sidebar{
+  flex:0 0 var(--ms-sidebar-w);
+  width:var(--ms-sidebar-w);
+  background:var(--ms-navy-side)!important;
+  border-right:1px solid var(--ms-navy-border-soft)!important;
+  display:flex;
+  flex-direction:column;
+  z-index:100;
+  overflow:hidden;
+}
+body.ms-theme .sidebar.ms-sidebar{
+  position:fixed;
+  top:0;left:0;bottom:0;
+}
+body.ms-theme .side-nav.ms-sidebar{
+  position:sticky;
+  top:0;
+  align-self:flex-start;
+  height:100vh;
+  overflow-y:auto;
+}
+body.cloud-warn-active .ms-sidebar{
+  top:42px;
+  height:calc(100vh - 42px);
+}
+.ms-sidebar-brand,
+.ms-sidebar .side-nav-header,
+.ms-sidebar .sidebar-logo{
+  flex-shrink:0;
+  padding:18px 16px 14px;
+  border-bottom:1px solid var(--ms-navy-border-soft);
+}
+.ms-sidebar-brand-title,
+.ms-sidebar .side-nav-title,
+.ms-sidebar .logo-main{
+  font-size:14px;
+  font-weight:800;
+  color:var(--ms-text-on-navy)!important;
+  line-height:1.35;
+  letter-spacing:.02em;
+}
+.ms-sidebar-brand-sub,
+.ms-sidebar .side-nav-sub,
+.ms-sidebar .logo-sub{
+  font-size:11px;
+  color:var(--ms-muted-on-navy)!important;
+  margin-top:4px;
+  line-height:1.4;
+}
+.ms-sidebar-nav,
+.ms-sidebar .side-nav-items,
+.ms-sidebar .sidebar-nav{
+  flex:1;
+  min-height:0;
+  padding:10px 0 12px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.ms-nav-item{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin:0 8px;
+  padding:11px 12px 11px 10px;
+  border-radius:8px;
+  border-left:3px solid transparent;
+  font-size:14px;
+  font-weight:500;
+  line-height:1.4;
+  color:#cbd5e1;
+  text-decoration:none;
+  transition:background .15s,color .15s,border-color .15s;
+  box-sizing:border-box;
+}
+.ms-nav-item:hover{
+  background:rgba(255,255,255,.1);
+  color:#f8fafc;
+}
+.ms-nav-item.active{
+  background:rgba(255,255,255,.16)!important;
+  border-left-color:#fff!important;
+  color:#fff!important;
+  font-weight:700;
+}
+.ms-nav-icon{
+  flex-shrink:0;
+  width:26px;
+  text-align:center;
+  font-size:18px;
+  line-height:1.35;
+}
+.ms-nav-label{
+  flex:1;
+  min-width:0;
+  white-space:normal;
+  word-break:keep-all;
+}
+.ms-sidebar-footer,
+.ms-sidebar .side-nav-footer,
+.ms-sidebar .sidebar-footer{
+  flex-shrink:0;
+  padding:12px 8px 14px;
+  border-top:1px solid var(--ms-navy-border-soft);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.ms-sidebar-footer-btn,
+.ms-sidebar-footer .ms-sidebar-footer-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:calc(100% - 16px);
+  margin:0 8px;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);
+  color:#e2e8f0;
+  font-size:13px;
+  font-weight:600;
+  font-family:inherit;
+  text-decoration:none;
+  cursor:pointer;
+  transition:background .15s,color .15s;
+  box-sizing:border-box;
+}
+.ms-sidebar-footer-btn:hover{
+  background:rgba(255,255,255,.14);
+  color:#fff;
+}
+.ms-sidebar-footer-meta{
+  font-size:10px;
+  color:#94a3b8;
+  text-align:center;
+  padding:0 8px 4px;
+  line-height:1.4;
+  opacity:0;
+  transition:opacity .4s;
+}
+.ms-sidebar-footer-meta.is-visible{
+  opacity:1;
+}
+/* モバイル「その他」内の8項目（白パネル用） */
+.mobile-more-panel .ms-nav-item{
+  margin:0 0 6px;
+  background:#fff;
+  border:1.5px solid var(--ms-navy-border);
+  border-left-width:1.5px;
+  color:var(--ms-text);
+}
+.mobile-more-panel .ms-nav-item:hover{
+  border-color:var(--ms-accent);
+  background:#f8fafc;
+  color:var(--ms-text);
+}
+.mobile-more-panel .ms-nav-item.active{
+  border-color:var(--ms-accent)!important;
+  background:var(--ms-accent-light)!important;
+  color:var(--ms-accent)!important;
+  border-left-width:1.5px!important;
+}
+.mobile-more-panel .ms-sidebar-footer-btn{
+  width:100%;
+  margin:0 0 6px;
+  background:var(--ms-surface2);
+  border:1.5px solid var(--ms-navy-border);
+  color:var(--ms-text);
+}
+.mobile-more-panel .ms-sidebar-footer-btn:hover{
+  background:#fff;
+  border-color:var(--ms-accent);
+  color:var(--ms-accent);
+}
+
+/* ── 白カード + ネイビー枠 ── */
+body.ms-theme .card,
+.ms-card{
+  background:var(--ms-surface);
+  border:1.5px solid var(--ms-navy-border);
+  border-radius:12px;
+}
+body.ms-theme .site-card{
+  background:var(--ms-surface);
+  border:1.5px solid var(--ms-navy-border);
+}
+body.ms-theme .site-card:hover{
+  border-color:var(--ms-accent);
+  box-shadow:0 0 0 3px rgba(30,64,175,.12);
+}
+
+/* ── ボタン ── */
+body.ms-theme .btn-primary,
+.ms-btn-primary{
+  background:var(--ms-accent);
+  color:#fff;
+}
+body.ms-theme .btn-primary:hover{
+  background:var(--ms-accent-hover);
+}
+
+/* ── マスタタブ ── */
+body.ms-theme .master-tab.active{
+  color:var(--ms-accent);
+  border-bottom-color:var(--ms-accent);
+}
+
+/* ── モバイル下段 ── */
+body.ms-theme .mobile-bottom-nav,
+body.kakou-mobile.ms-theme .mobile-bottom-nav,
+body.genba-mobile.ms-theme .mobile-bottom-nav{
+  background:var(--ms-navy-side)!important;
+  border-top-color:var(--ms-navy-border-soft)!important;
+  box-shadow:0 -4px 20px rgba(0,0,0,.2)!important;
+}
+body.ms-theme .mbn-item,
+body.ms-theme .mbn-k{
+  color:var(--ms-muted-on-navy);
+}
+body.ms-theme .mbn-item.active,
+body.ms-theme .mbn-k.active{
+  color:#fff!important;
+}
+body.ms-theme .mobile-more-panel{
+  border-top:2px solid var(--ms-navy-border);
+}
